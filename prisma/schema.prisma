@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model PdfFile {
+  id        String   @id @default(uuid())
+  fileName  String
+  filePath  String   @unique
+  pageCount Int
+  fileSize  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inputs PdfInput[]
+
+  @@index([createdAt])
+  @@map("pdf_files")
+}
+
+model PdfInput {
+  id         String    @id @default(uuid())
+  pdfFileId  String
+  slug       String
+  label      String
+  inputType  InputType
+  pageNumber Int
+  xCoord     Float
+  yCoord     Float
+  width      Float
+  height     Float
+  fontSize   Int       @default(12)
+  fontFamily String?   @default("Arial, sans-serif")
+  fontWeight String?   @default("normal")
+  fontStyle  String?   @default("normal")
+  textAlign  String?   @default("left")
+  textColor  String?   @default("#000000")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  pdfFile PdfFile @relation(fields: [pdfFileId], references: [id], onDelete: Cascade)
+
+  @@unique([pdfFileId, slug])
+  @@index([pdfFileId])
+  @@index([pageNumber])
+  @@map("pdf_inputs")
+}
+
+model SignatureImage {
+  id         String   @id @default(uuid())
+  filePath   String   @unique
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("signature_images")
+}
+
+enum InputType {
+  TEXT
+  DATE
+  NUMBER
+  EMAIL
+  CHECKBOX
+  RADIO
+  CHECK
+  CROSS
+  SIGNATURE
+  IMAGE
+}

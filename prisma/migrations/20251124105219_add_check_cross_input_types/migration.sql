@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `pdf_inputs` MODIFY `inputType` ENUM('TEXT', 'DATE', 'NUMBER', 'EMAIL', 'CHECKBOX', 'RADIO', 'CHECK', 'CROSS', 'SIGNATURE', 'IMAGE') NOT NULL;

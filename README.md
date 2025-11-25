@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PDF Editor Module
+
+A production-ready, full-stack PDF editor built with Next.js 15+, Prisma, and Tailwind CSS. Features drag-and-drop field placement, multi-type data entry, and precise PDF generation.
+
+## Features
+
+- **PDF Management**: Secure upload and storage of PDF files.
+- **Visual Editor**: Drag & drop interface to place input fields (Text, Checkbox, Signature, etc.).
+- **Field Properties**: Customize size, labels, and validation types.
+- **Form Filling**: Public-facing page to fill and sign documents.
+- **PDF Generation**: Pixel-perfect overlay of data onto original PDFs.
+- **Security**: API key protection, file validation, and secure storage.
+
+## Tech Stack
+
+- **Framework**: Next.js 15+ (App Router)
+- **Database**: MySQL with Prisma ORM
+- **Styling**: Tailwind CSS with custom design system
+- **State Management**: Zustand
+- **PDF Handling**: `pdf-lib` (generation), `react-pdf` (rendering)
+- **Drag & Drop**: `@dnd-kit/core`
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js 18+
+- MySQL Database
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Clone and Install**
+   ```bash
+   npm install
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Environment Setup**
+   Copy `.env.example` to `.env` and update credentials:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Update `DATABASE_URL` with your MySQL connection string.
 
-## Learn More
+3. **Database Setup**
+   ```bash
+   npx prisma migrate dev --name init
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+4. **Run Development Server**
+   ```bash
+   npm run dev
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   Visit `http://localhost:3000` to start.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Usage
 
-## Deploy on Vercel
+1. **Upload PDF**: Drag & drop a PDF file on the home screen.
+2. **Add Fields**: Use the sidebar to add fields like Text, Date, Signature.
+3. **Position**: Drag fields to desired locations on the PDF.
+4. **Save**: Click "Save" to persist field configurations.
+5. **Preview/Fill**: Click "Preview Form" to open the fillable version.
+6. **Download**: Fill the form and click "Download Filled PDF".
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## API Documentation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `docs/testing.md` for testing procedures.
+
+### Endpoints
+
+- `POST /api/pdf/upload`: Upload PDF
+- `POST /api/inputs/save`: Save field configurations
+- `GET /api/inputs/[pdfId]`: Get fields for a PDF
+- `POST /api/pdf/fill`: Generate filled PDF
+- `POST /api/signature/upload`: Upload signature images
+
+## License
+
+MIT
