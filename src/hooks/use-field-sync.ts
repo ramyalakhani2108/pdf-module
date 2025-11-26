@@ -11,7 +11,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useEditorStore } from '@/lib/store';
 import type { PdfInput } from '@/lib/types';
 
-const API_KEY = 'your-secure-api-key-here-change-in-production';
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'api_key';
 const DEBOUNCE_MS = 800; // Debounce for DB sync
 const RETRY_DELAY_MS = 3000; // Retry delay on failure
 const MAX_RETRIES = 3;

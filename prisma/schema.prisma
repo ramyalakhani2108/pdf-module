@@ -44,7 +44,7 @@ model PdfInput {
   textColor      String?   @default("#000000")
   iconVariant    String?   @default("CHECK")
   iconColor      String?   @default("#000000")
-  defaultVisible Boolean?  @default(true)
+  defaultVisible Boolean?  @default(false)
   // Border and appearance settings
   borderRadius   Float?    @default(0)
   borderEnabled  Boolean?  @default(false)

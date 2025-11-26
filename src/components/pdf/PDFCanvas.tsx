@@ -52,11 +52,11 @@ const CURRENT_GRID = GRID_OPTIONS.SMALL; // Default to 8px grid
 // Field types for the toolbar
 const fieldTypes: { type: InputType; label: string; icon: React.ElementType }[] = [
     { type: 'TEXT', label: 'Text', icon: Type },
-    { type: 'DATE', label: 'Date', icon: Calendar },
-    { type: 'NUMBER', label: 'Number', icon: Hash },
-    { type: 'EMAIL', label: 'Email', icon: Mail },
+    // { type: 'DATE', label: 'Date', icon: Calendar },
+    // { type: 'NUMBER', label: 'Number', icon: Hash },
+    // { type: 'EMAIL', label: 'Email', icon: Mail },
     { type: 'ICON', label: 'Icon', icon: Shapes },
-    { type: 'SIGNATURE', label: 'Signature', icon: PenTool },
+    // { type: 'SIGNATURE', label: 'Signature', icon: PenTool },
     { type: 'IMAGE', label: 'Image', icon: ImageIcon },
     { type: 'FILLABLE', label: 'Fillable', icon: FormInput },
 ];
@@ -421,15 +421,15 @@ export function PDFCanvas() {
             return;
         }
 
-        // Zoom controls - max 400% for precision editing
+        // Zoom controls - max 400% for precision editing (25% increment)
         if (cmdKey && (e.key === '=' || e.key === '+')) {
             e.preventDefault();
-            setZoom(z => Math.min(4, z + 0.1));
+            setZoom(z => Math.min(4, z + 0.25));
             return;
         }
         if (cmdKey && e.key === '-') {
             e.preventDefault();
-            setZoom(z => Math.max(0.3, z - 0.1));
+            setZoom(z => Math.max(0.3, z - 0.25));
             return;
         }
         if (cmdKey && e.key === '0') {
@@ -510,7 +510,7 @@ export function PDFCanvas() {
         e.preventDefault();
 
         // Determine zoom direction: deltaY < 0 means scroll up (zoom in), > 0 means scroll down (zoom out)
-        const zoomStep = 0.1;
+        const zoomStep = 0.25;
         const direction = e.deltaY < 0 ? 1 : -1;
         const newZoom = Math.max(0.3, Math.min(4, zoom + direction * zoomStep));
 
@@ -588,8 +588,9 @@ export function PDFCanvas() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setZoom(s => Math.max(0.5, s - 0.1))}
+                        onClick={() => setZoom(s => Math.max(0.3, s - 0.25))}
                         className="text-foreground hover:bg-muted"
+                        title="Zoom Out (min 30%)"
                     >
                         <ZoomOut className="w-4 h-4" />
                     </Button>
@@ -599,7 +600,7 @@ export function PDFCanvas() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setZoom(s => Math.min(4, s + 0.1))}
+                        onClick={() => setZoom(s => Math.min(4, s + 0.25))}
                         className="text-foreground hover:bg-muted"
                         title="Zoom In (max 400%)"
                     >
@@ -726,7 +727,7 @@ export function PDFCanvas() {
             </div>
 
             {/* Tools Toolbar - MS Word/Paint style */}
-            <div className="bg-card border-b border-border px-3 py-2">
+            <div className="bg-card border-b border-border px-3 py-2 flex justify-center">
                 <div className="flex items-center gap-1">
                     {/* Tool selection label */}
                     <span className="text-xs font-medium text-muted-foreground mr-2 select-none">Tools:</span>
@@ -964,8 +965,8 @@ export function PDFCanvas() {
                                     height: pageDimensions ? pageDimensions.height * zoom : 'auto',
                                     // Prevent shrinking
                                     flexShrink: 0,
-                                    // Disable transition during sticky zoom for instant position-preserving zoom
-                                    transition: stickyZoom ? 'none' : 'width 0.3s ease-out, height 0.3s ease-out',
+                                    // No transition for instant, flicker-free zooming
+                                    transition: 'none',
                                     backgroundImage: showGrid ? `
                                         linear-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px),
                                         linear-gradient(90deg, hsl(var(--primary) / 0.1) 1px, transparent 1px)

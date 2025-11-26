@@ -12,7 +12,7 @@ import { FileText, ArrowLeft, Loader2, AlertCircle, Link as LinkIcon } from 'luc
 import { Button } from '@/components/ui/button';
 import type { PdfInput } from '@/lib/types';
 
-const API_KEY = 'your-secure-api-key-here-change-in-production';
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'api_key';
 const FIELDS_BACKUP_KEY = 'pdf-editor-fields-backup';
 
 /**

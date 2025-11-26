@@ -52,11 +52,12 @@ const iconVariantComponents: Record<string, React.ElementType> = {
 interface PDFFormFillerProps {
     pdf: PdfFile;
     fields: PdfInput[];
+    isImported?: boolean;
 }
 
 type ViewMode = 'fit-width' | 'fit-page' | 'actual-size' | 'custom';
 
-export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
+export function PDFFormFiller({ pdf, fields, isImported = false }: PDFFormFillerProps) {
     const [values, setValues] = useState<Record<string, any>>({});
     const [containerWidth, setContainerWidth] = useState<number>(0);
     const [submitting, setSubmitting] = useState(false);
@@ -219,11 +220,12 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
         const formData = new FormData();
         formData.append('file', file);
 
+        const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'api_key';
         try {
             const response = await fetch('/api/signature/upload', {
                 method: 'POST',
                 headers: {
-                    'x-api-key': 'your-secure-api-key-here-change-in-production',
+                    'x-api-key': apiKey,
                 },
                 body: formData,
             });
@@ -238,13 +240,14 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
     };
 
     const handleSubmit = async () => {
+        const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'api_key';
         setSubmitting(true);
         try {
             const response = await fetch('/api/pdf/fill', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': 'your-secure-api-key-here-change-in-production',
+                    'x-api-key': apiKey,
                 },
                 body: JSON.stringify({
                     pdfFileId: pdf.id,
@@ -255,10 +258,10 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
 
             const data = await response.json();
 
-            if (data.success && data.pdfBase64) {
-                // Download the filled PDF
+            if (data.success && data.pdfUrl) {
+                // Download the filled PDF from the server URL
                 const link = document.createElement('a');
-                link.href = `data:application/pdf;base64,${data.pdfBase64}`;
+                link.href = data.pdfUrl;
                 link.download = `filled_${pdf.fileName}`;
                 document.body.appendChild(link);
                 link.click();
@@ -307,94 +310,96 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                 </div>
             )}
             
-            {/* Compact Toolbar */}
-            <div className="flex items-center justify-between bg-background px-4 py-2 border-b">
-                <div className="flex items-center gap-2">
-                    {/* Page Navigation */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handlePrevPage}
-                        disabled={currentPage <= 1}
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <span className="text-sm font-medium min-w-[100px] text-center">
-                        Page {currentPage} of {pdf.pageCount}
-                    </span>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleNextPage}
-                        disabled={currentPage >= pdf.pageCount}
-                    >
-                        <ChevronRight className="w-4 h-4" />
-                    </Button>
-                    
-                    <div className="h-6 w-px bg-border mx-2" />
+            {/* Compact Toolbar - Hidden when imported */}
+            {!isImported && (
+                <div className="flex items-center justify-between bg-background px-4 py-2 border-b">
+                    <div className="flex items-center gap-2">
+                        {/* Page Navigation */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handlePrevPage}
+                            disabled={currentPage <= 1}
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <span className="text-sm font-medium min-w-[100px] text-center">
+                            Page {currentPage} of {pdf.pageCount}
+                        </span>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleNextPage}
+                            disabled={currentPage >= pdf.pageCount}
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </Button>
+                        
+                        <div className="h-6 w-px bg-border mx-2" />
 
-                    {/* Zoom Controls */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleZoomOut}
-                    >
-                        <ZoomOut className="w-4 h-4" />
-                    </Button>
-                    <span className="text-sm min-w-[60px] text-center">
-                        {Math.round(scale * 100)}%
-                    </span>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleZoomIn}
-                    >
-                        <ZoomIn className="w-4 h-4" />
-                    </Button>
-                </div>
+                        {/* Zoom Controls */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleZoomOut}
+                        >
+                            <ZoomOut className="w-4 h-4" />
+                        </Button>
+                        <span className="text-sm min-w-[60px] text-center">
+                            {Math.round(scale * 100)}%
+                        </span>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleZoomIn}
+                        >
+                            <ZoomIn className="w-4 h-4" />
+                        </Button>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant={debugMode ? 'default' : 'outline'}
-                        onClick={() => {
-                            setDebugMode(!debugMode);
-                            if (!debugMode) {
-                                reset();
-                                console.log('🎯 Alignment debugging enabled. Report available in console.');
-                            } else {
-                                clearDebug();
-                                console.log('📊 Final alignment report:', generateReport());
-                            }
-                        }}
-                        className={cn(
-                            "gap-2 text-xs",
-                            debugMode && "bg-red-500 hover:bg-red-600 ring-2 ring-red-300"
-                        )}
-                    >
-                        <Bug className="w-4 h-4" />
-                        {debugMode ? 'Debug ON' : 'Debug Mode'}
-                    </Button>
-                    <Button
-                        variant={adjustmentMode ? 'default' : 'outline'}
-                        onClick={() => setAdjustmentMode(!adjustmentMode)}
-                        className={cn(
-                            "gap-2",
-                            adjustmentMode && "bg-orange-500 hover:bg-orange-600 ring-2 ring-orange-300"
-                        )}
-                    >
-                        <Maximize2 className="w-4 h-4" />
-                        {adjustmentMode ? 'Exit Adjust' : 'Adjust Placement'}
-                    </Button>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        className="gap-2"
-                    >
-                        <Download className="w-4 h-4" />
-                        {submitting ? 'Generating...' : 'Download PDF'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant={debugMode ? 'default' : 'outline'}
+                            onClick={() => {
+                                setDebugMode(!debugMode);
+                                if (!debugMode) {
+                                    reset();
+                                    console.log('🎯 Alignment debugging enabled. Report available in console.');
+                                } else {
+                                    clearDebug();
+                                    console.log('📊 Final alignment report:', generateReport());
+                                }
+                            }}
+                            className={cn(
+                                "gap-2 text-xs",
+                                debugMode && "bg-red-500 hover:bg-red-600 ring-2 ring-red-300"
+                            )}
+                        >
+                            <Bug className="w-4 h-4" />
+                            {debugMode ? 'Debug ON' : 'Debug Mode'}
+                        </Button>
+                        <Button
+                            variant={adjustmentMode ? 'default' : 'outline'}
+                            onClick={() => setAdjustmentMode(!adjustmentMode)}
+                            className={cn(
+                                "gap-2",
+                                adjustmentMode && "bg-orange-500 hover:bg-orange-600 ring-2 ring-orange-300"
+                            )}
+                        >
+                            <Maximize2 className="w-4 h-4" />
+                            {adjustmentMode ? 'Exit Adjust' : 'Adjust Placement'}
+                        </Button>
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={submitting}
+                            className="gap-2"
+                        >
+                            <Download className="w-4 h-4" />
+                            {submitting ? 'Generating...' : 'Download PDF'}
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* PDF Viewport */}
             <div

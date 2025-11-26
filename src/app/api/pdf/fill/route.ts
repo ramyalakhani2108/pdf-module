@@ -13,8 +13,9 @@
 
 import { NextRequest } from 'next/server';
 import { PDFDocument, rgb, StandardFonts, PDFFont } from 'pdf-lib';
-import { readFile } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 import prisma from '@/lib/prisma';
 import { validateApiKey, createErrorResponse, createSuccessResponse } from '@/lib/utils';
 import { API_CONFIG, ERROR_MESSAGES, CALIBRATION_CONFIG } from '@/lib/constants';
@@ -164,10 +165,10 @@ export async function POST(request: NextRequest) {
       // Handle ICON fields - they use boolean values for visibility
       if (inputType === 'ICON') {
         // Determine if icon should be visible
-        // Priority: 1) Explicit value from API, 2) defaultVisible from field config, 3) true
+        // Priority: 1) Explicit value from API, 2) defaultVisible from field config, 3) false (default hidden)
         const isVisible = value !== undefined 
           ? value === true || value === 'true'  // Accept boolean or string 'true'
-          : (input as any).defaultVisible !== false; // Default to visible unless explicitly set to false
+          : (input as any).defaultVisible === true; // Default to hidden (false) for icons
         
         if (!isVisible) continue; // Skip drawing this icon if visibility is false
       } else if (inputType === 'FILLABLE') {
@@ -202,8 +203,8 @@ export async function POST(request: NextRequest) {
       //   This gives us the BOTTOM-LEFT corner of the field in PDF coords
       //
       // NO additional offsets needed - the coordinates should map directly
-      const pdfX = xCoord + 0.5;
-      const pdfY = (pageHeight - yCoord - input.height);
+      const pdfX = xCoord;
+      const pdfY = (pageHeight - yCoord - input.height) - 0.5;
 
       const fontSize = input.fontSize;
 
@@ -308,11 +309,25 @@ export async function POST(request: NextRequest) {
 
     // Save and return filled PDF
     const pdfBytes = await pdfDoc.save();
-    const base64Pdf = Buffer.from(pdfBytes).toString('base64');
+    
+    // Create filled PDFs directory if it doesn't exist
+    const filledPdfsDir = path.join(process.cwd(), 'public', 'uploads', 'filled-pdfs');
+    await mkdir(filledPdfsDir, { recursive: true });
+    
+    // Generate unique filename for the filled PDF
+    const fileName = `filled_${uuidv4()}.pdf`;
+    const filePath = path.join(filledPdfsDir, fileName);
+    
+    // Write PDF to disk
+    await writeFile(filePath, pdfBytes);
+    
+    // Construct the server URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const pdfUrl = `${baseUrl}/uploads/filled-pdfs/${fileName}`;
 
     return createSuccessResponse({
       success: true,
-      pdfBase64: base64Pdf,
+      pdfUrl: pdfUrl,
     });
   } catch (error) {
     console.error('PDF fill error:', error);

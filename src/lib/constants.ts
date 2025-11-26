@@ -25,7 +25,7 @@ export const API_CONFIG = {
   /** Default API key header name */
   API_KEY_HEADER: 'x-api-key',
   /** Development API key (should be overridden in production) */
-  DEV_API_KEY: 'your-secure-api-key-here-change-in-production',
+  DEV_API_KEY: process.env.API_KEY,
 } as const;
 
 // =============================================================================

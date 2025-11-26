@@ -81,7 +81,7 @@ http://localhost:3000/api
             type: 'apiKey',
             in: 'header',
             name: 'x-api-key',
-            description: 'API key for authentication. Use `your-secure-api-key-here-change-in-production` for development.',
+            description: 'API key for authentication. Use `API_KEY` for development.',
           },
         },
         schemas: {
@@ -269,7 +269,7 @@ http://localhost:3000/api
               },
               defaultVisible: {
                 type: 'boolean',
-                default: true,
+                default: false,
                 description: 'Default visibility for ICON fields in filled PDF',
               },
               createdAt: {

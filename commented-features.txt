@@ -3,3 +3,21 @@ Drag overlay icons (Layers icon + small page label) — Disabled in `src/compone
 Drag handle icon (GripVertical) — Disabled in `src/components/pdf/PageThumbnailSidebar.tsx` (ThumbnailCard). Uncomment <GripVertical className="w-3.5 h-3.5" /> to re-enable.
 
 Note: The drag listeners and underlying DnD functionality remain active even when icons are commented out; uncomment lines to restore the visual affordances only.
+
+==================================================
+
+Input Type Toolbar Features (Commented Out):
+
+DATE input type — Disabled in `src/components/pdf/PDFCanvas.tsx` line 55. Uncomment:
+  { type: 'DATE', label: 'Date', icon: Calendar },
+
+NUMBER input type — Disabled in `src/components/pdf/PDFCanvas.tsx` line 56. Uncomment:
+  { type: 'NUMBER', label: 'Number', icon: Hash },
+
+EMAIL input type — Disabled in `src/components/pdf/PDFCanvas.tsx` line 57. Uncomment:
+  { type: 'EMAIL', label: 'Email', icon: Mail },
+
+SIGNATURE input type — Disabled in `src/components/pdf/PDFCanvas.tsx` line 60. Uncomment:
+  { type: 'SIGNATURE', label: 'Signature', icon: PenTool },
+
+These input types are fully functional and can be re-enabled by uncommenting their entries in the fieldTypes array.

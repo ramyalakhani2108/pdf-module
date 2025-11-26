@@ -6,6 +6,8 @@ import { useEditorStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { cn, formatBytes } from '@/lib/utils';
 
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'api_key';
+
 export function PDFUploader() {
     const [isDragging, setIsDragging] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -38,7 +40,7 @@ export function PDFUploader() {
             const response = await fetch('/api/pdf/upload', {
                 method: 'POST',
                 headers: {
-                    'x-api-key': 'your-secure-api-key-here-change-in-production', // In real app, use env var or auth context
+                    'x-api-key': API_KEY,
                 },
                 body: formData,
             });

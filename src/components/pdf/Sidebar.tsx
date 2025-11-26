@@ -7,10 +7,10 @@ import {
     Save, Trash2, Settings, Check, X as XIcon, Circle, 
     CheckCircle, XCircle, Square, CheckSquare, Star, Heart,
     ArrowRight, ArrowLeft, ArrowUp, ArrowDown,
-    Eye, EyeOff, Layers
+    Eye, EyeOff, Layers, GripVertical
 } from 'lucide-react';
 import { cn, generateSlug } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ICON_VARIANTS, ICON_COLORS, FONT_CONFIG } from '@/lib/constants';
 import { ItemsPanel } from './ItemsPanel';
 
@@ -42,19 +42,60 @@ export function Sidebar() {
 
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'properties' | 'items'>('properties');
+    const [sidebarWidth, setSidebarWidth] = useState(320); // 80 * 4 = 320px (w-80)
+    const [isResizing, setIsResizing] = useState(false);
+    const sidebarRef = useRef<HTMLDivElement>(null);
+
+    const MIN_WIDTH = 320; // Current width
+    const MAX_WIDTH = 640; // Double the current width
+
+    // Handle resize
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing) return;
+
+            if (sidebarRef.current) {
+                const container = sidebarRef.current.parentElement;
+                if (!container) return;
+
+                const containerRight = container.getBoundingClientRect().right;
+                const mouseX = e.clientX;
+                const newWidth = containerRight - mouseX;
+
+                // Constrain width between min and max
+                if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+                    setSidebarWidth(newWidth);
+                }
+            }
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+        };
+
+        if (isResizing) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isResizing]);
 
     const selectedField = fields.find(f => f.id === selectedFieldId);
 
     const handleSave = async () => {
         if (!currentPdf) return;
 
+        const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'api_key';
         setSaving(true);
         try {
             const response = await fetch('/api/inputs/save', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': 'your-secure-api-key-here-change-in-production',
+                    'x-api-key': apiKey,
                 },
                 body: JSON.stringify({
                     pdfFileId: currentPdf.id,
@@ -82,7 +123,23 @@ export function Sidebar() {
     if (!currentPdf) return null;
 
     return (
-        <div className="w-80 border-l border-border bg-surface flex flex-col h-full">
+        <>
+            {/* Resize Handle - Left border */}
+            <div
+                onMouseDown={() => setIsResizing(true)}
+                className={cn(
+                    "w-1 bg-border hover:bg-primary transition-colors cursor-col-resize group",
+                    isResizing && "bg-primary"
+                )}
+                title="Drag to resize sidebar"
+            />
+            
+            {/* Sidebar */}
+            <div
+                ref={sidebarRef}
+                style={{ width: `${sidebarWidth}px` }}
+                className="border-l border-border bg-surface flex flex-col h-full transition-all"
+            >
             {/* Header with Save */}
             <div className="p-3 border-b border-border flex items-center justify-between">
                 <h2 className="font-semibold text-sm text-foreground">Editor</h2>
@@ -138,7 +195,7 @@ export function Sidebar() {
             {/* Tab Content */}
             <div className="flex-1 overflow-y-auto p-4">
                 {activeTab === 'items' ? (
-                    <ItemsPanel />
+                    <ItemsPanel onSwitchToProperties={() => setActiveTab('properties')} />
                 ) : (
                     <>
                         {/* Properties Panel */}
@@ -281,51 +338,6 @@ export function Sidebar() {
                             {/* Icon Properties */}
                             {selectedField.inputType === 'ICON' && (
                                 <>
-                                    {/* Default Visibility Toggle */}
-                                    <div className="space-y-2 bg-primary/5 border border-primary/20 rounded-lg p-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                {selectedField.defaultVisible !== false ? (
-                                                    <Eye className="w-4 h-4 text-green-600" />
-                                                ) : (
-                                                    <EyeOff className="w-4 h-4 text-muted-foreground" />
-                                                )}
-                                                <label className="text-xs font-medium">Default Visibility</label>
-                                            </div>
-                                            <button
-                                                onClick={() => updateField(selectedField.id, { 
-                                                    defaultVisible: selectedField.defaultVisible === false ? true : false 
-                                                })}
-                                                className={cn(
-                                                    "relative w-12 h-6 rounded-full transition-colors duration-200",
-                                                    selectedField.defaultVisible !== false 
-                                                        ? "bg-green-500" 
-                                                        : "bg-muted"
-                                                )}
-                                            >
-                                                <span className={cn(
-                                                    "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200",
-                                                    selectedField.defaultVisible !== false 
-                                                        ? "left-6" 
-                                                        : "left-0.5"
-                                                )} />
-                                            </button>
-                                        </div>
-                                        <p className="text-[10px] text-primary/80">
-                                            {selectedField.defaultVisible !== false 
-                                                ? "✅ Icon will show by default in filled PDF" 
-                                                : "⚪ Icon will be hidden by default (can be enabled via API)"}
-                                        </p>
-                                        <div className="mt-2 p-2 bg-card rounded border border-border">
-                                            <p className="text-[9px] text-muted-foreground font-medium mb-1">💡 API Usage:</p>
-                                            <code className="text-[9px] text-foreground bg-muted px-1 py-0.5 rounded block font-mono">
-                                                {`{ "${selectedField.slug}": ${selectedField.defaultVisible !== false ? 'false' : 'true'} }`}
-                                            </code>
-                                            <p className="text-[9px] text-muted-foreground mt-1">
-                                                Pass this in the fill API to {selectedField.defaultVisible !== false ? 'hide' : 'show'} this icon
-                                            </p>
-                                        </div>
-                                    </div>
 
                                     <div className="space-y-1">
                                         <label className="text-xs font-medium">Icon Type</label>
@@ -752,6 +764,7 @@ export function Sidebar() {
                     </>
                 )}
             </div>
-        </div>
+            </div>
+        </>
     );
 }

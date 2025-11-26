@@ -9,7 +9,7 @@ import {
     Trash2, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown,
     GripVertical, Check, X as XIcon, Circle, 
     CheckCircle, XCircle, Square, CheckSquare, Star, Heart,
-    ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Layers, Eye, EyeOff,
+    ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Layers, Eye, EyeOff, MoreHorizontal,
     // New icons
     CircleDot, ThumbsUp, ThumbsDown, Flag, MapPin, Bookmark, Info, AlertTriangle, Minus, Plus,
     FormInput
@@ -108,6 +108,7 @@ interface SortableItemProps {
     onSendToBack: (id: string) => void;
     onUpdateLabel: (id: string, newLabel: string) => void;
     onToggleVisibility: (id: string) => void;
+    onShowProperties: (id: string) => void;
     allFields: PdfInput[];
     isFirst: boolean;
     isLast: boolean;
@@ -124,6 +125,7 @@ function SortableItem({
     onSendToBack,
     onUpdateLabel,
     onToggleVisibility,
+    onShowProperties,
     allFields,
     isFirst,
     isLast,
@@ -217,8 +219,9 @@ function SortableItem({
         <div
             ref={setNodeRef}
             style={style}
+            onClick={() => onSelect(field.id)}
             className={cn(
-                "group flex flex-col gap-1.5 px-3 py-2 rounded-md transition-all border-l-2",
+                "group flex flex-col gap-1.5 px-3 py-2 rounded-md transition-all border-l-2 cursor-pointer",
                 typeBorderColors[field.inputType],
                 isSelected 
                     ? "bg-primary/10 ring-1 ring-primary/30" 
@@ -342,47 +345,65 @@ function SortableItem({
                             <Eye className="w-3 h-3" />
                         )}
                     </button>
-                </div>
-            </div>
 
-            {/* Label Edit Row */}
-            <div className="flex items-center gap-2 pl-8 pr-2">
-                <span className="text-[10px] text-muted-foreground font-medium uppercase shrink-0">Label:</span>
-                {isEditingLabel ? (
-                    <input
-                        ref={labelInputRef}
-                        type="text"
-                        value={editLabelValue}
-                        onChange={handleLabelChange}
-                        onBlur={handleLabelBlur}
-                        onKeyDown={handleKeyDown}
-                        className="flex-1 min-w-0 h-6 px-2 text-xs rounded border border-primary bg-transparent font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        spellCheck="false"
-                    />
-                ) : (
+                    {/* More button - Shows properties tab */}
                     <button
-                        onClick={() => onSelect(field.id)}
-                        onDoubleClick={handleLabelDoubleClick}
-                        className="flex-1 min-w-0 text-left h-6 px-2 text-xs rounded border border-border bg-muted/30 font-medium text-foreground hover:border-primary hover:bg-muted/50 transition-colors cursor-text truncate"
-                        title="Double-click to edit"
+                        onClick={() => onShowProperties(field.id)}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        title="More options (Properties)"
                     >
-                        {field.label}
+                        <MoreHorizontal className="w-3 h-3" />
                     </button>
-                )}
-            </div>
-
-            {/* Slug Display Row (Read-only) */}
-            <div className="flex items-center gap-2 pl-8 pr-2">
-                <span className="text-[10px] text-muted-foreground font-medium uppercase shrink-0">Slug:</span>
-                <div className="flex-1 min-w-0 h-6 px-2 text-xs rounded border border-border bg-muted/30 font-mono text-muted-foreground flex items-center truncate overflow-hidden">
-                    {field.slug}
                 </div>
             </div>
+
+            {/* Label Edit Row - Only visible when selected or editing */}
+            {isSelected && (
+                <>
+                    <div className="flex items-center gap-2 pl-8 pr-2">
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase shrink-0">Label:</span>
+                        {isEditingLabel ? (
+                            <input
+                                ref={labelInputRef}
+                                type="text"
+                                value={editLabelValue}
+                                onChange={handleLabelChange}
+                                onBlur={handleLabelBlur}
+                                onKeyDown={handleKeyDown}
+                                className="flex-1 min-w-0 h-6 px-2 text-xs rounded border border-primary bg-transparent font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                spellCheck="false"
+                            />
+                        ) : (
+                            <button
+                                onClick={() => onSelect(field.id)}
+                                onDoubleClick={handleLabelDoubleClick}
+                                className="flex-1 min-w-0 text-left h-6 px-2 text-xs rounded border border-border bg-muted/30 font-medium text-foreground hover:border-primary hover:bg-muted/50 transition-colors cursor-text truncate"
+                                title="Double-click to edit"
+                            >
+                                {field.label}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Slug Display Row - Only visible when selected */}
+                    <div className="flex items-center gap-2 pl-8 pr-2">
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase shrink-0">Slug:</span>
+                        <div className="flex-1 min-w-0 h-6 px-2 text-xs rounded border border-border bg-muted/30 font-mono text-muted-foreground flex items-center truncate overflow-hidden">
+                            {field.slug}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
 
-export function ItemsPanel() {
+interface PageGroup {
+    pageNumber: number;
+    fields: PdfInput[];
+}
+
+export function ItemsPanel({ onSwitchToProperties }: { onSwitchToProperties?: () => void }) {
     const {
         fields,
         currentPage,
@@ -395,12 +416,34 @@ export function ItemsPanel() {
         sendBackward,
         reorderFields,
         updateField,
+        setCurrentPage,
     } = useEditorStore();
 
-    // Filter and sort fields for current page (higher zIndex = front = top of list)
-    const pageFields = fields
+    // Group all fields by page number and sort pages
+    const pageGroups: PageGroup[] = [];
+    const pageMap = new Map<number, PdfInput[]>();
+    
+    fields.forEach(field => {
+        if (!pageMap.has(field.pageNumber)) {
+            pageMap.set(field.pageNumber, []);
+        }
+        pageMap.get(field.pageNumber)!.push(field);
+    });
+    
+    // Sort by page number and create groups
+    Array.from(pageMap.entries())
+        .sort(([pageA], [pageB]) => pageA - pageB)
+        .forEach(([pageNumber, pageFields]) => {
+            pageGroups.push({
+                pageNumber,
+                fields: pageFields.sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))
+            });
+        });
+
+    // Get fields for current page for drag and drop
+    const currentPageFields = fields
         .filter(f => f.pageNumber === currentPage)
-        .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0)); // Descending order
+        .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0));
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -417,15 +460,15 @@ export function ItemsPanel() {
         const { active, over } = event;
 
         if (over && active.id !== over.id) {
-            const oldIndex = pageFields.findIndex(f => f.id === active.id);
-            const newIndex = pageFields.findIndex(f => f.id === over.id);
+            const oldIndex = currentPageFields.findIndex(f => f.id === active.id);
+            const newIndex = currentPageFields.findIndex(f => f.id === over.id);
             
-            const newOrder = arrayMove(pageFields, oldIndex, newIndex);
+            const newOrder = arrayMove(currentPageFields, oldIndex, newIndex);
             // Reverse because our list shows front-to-back, but zIndex should be back-to-front
             const orderedIds = [...newOrder].reverse().map(f => f.id);
             reorderFields(currentPage, orderedIds);
         }
-    }, [pageFields, currentPage, reorderFields]);
+    }, [currentPageFields, currentPage, reorderFields]);
 
     const handleUpdateSlug = useCallback((fieldId: string, newSlug: string) => {
         const field = fields.find(f => f.id === fieldId);
@@ -450,11 +493,35 @@ export function ItemsPanel() {
         }
     }, [fields, updateField]);
 
-    if (pageFields.length === 0) {
+    const handleShowProperties = useCallback((fieldId: string) => {
+        const field = fields.find(f => f.id === fieldId);
+        if (field && field.pageNumber !== currentPage) {
+            // Navigate to the field's page
+            setCurrentPage(field.pageNumber);
+        }
+        // Select the field first
+        selectField(fieldId);
+        // Switch to properties tab
+        if (onSwitchToProperties) {
+            onSwitchToProperties();
+        }
+    }, [selectField, onSwitchToProperties, fields, currentPage, setCurrentPage]);
+
+    const handleSelectField = useCallback((fieldId: string) => {
+        const field = fields.find(f => f.id === fieldId);
+        if (field && field.pageNumber !== currentPage) {
+            // Navigate to the field's page
+            setCurrentPage(field.pageNumber);
+        }
+        // Select the field
+        selectField(fieldId);
+    }, [selectField, fields, currentPage, setCurrentPage]);
+
+    if (pageGroups.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Layers className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">No items on this page</p>
+                <p className="text-sm text-muted-foreground">No items added yet</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
                     Add fields using the toolbar above
                 </p>
@@ -463,52 +530,75 @@ export function ItemsPanel() {
     }
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-3">
             {/* Header */}
-            <div className="flex items-center justify-between px-1 mb-3">
+            <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                     <Layers className="w-4 h-4 text-muted-foreground" />
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Page {currentPage} Items
+                        All Items
                     </span>
                 </div>
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    {pageFields.length}
+                    {fields.length}
                 </span>
             </div>
 
-            {/* Items List */}
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-            >
-                <SortableContext
-                    items={pageFields.map(f => f.id)}
-                    strategy={verticalListSortingStrategy}
-                >
-                    <div className="space-y-1">
-                        {pageFields.map((field, index) => (
-                            <SortableItem
-                                key={field.id}
-                                field={field}
-                                isSelected={selectedFieldId === field.id}
-                                onSelect={selectField}
-                                onDelete={deleteField}
-                                onBringForward={bringForward}
-                                onSendBackward={sendBackward}
-                                onBringToFront={bringToFront}
-                                onSendToBack={sendToBack}
-                                onUpdateLabel={handleUpdateLabel}
-                                onToggleVisibility={handleToggleVisibility}
-                                allFields={fields}
-                                isFirst={index === 0}
-                                isLast={index === pageFields.length - 1}
-                            />
-                        ))}
+            {/* Page Groups */}
+            <div className="space-y-4">
+                {pageGroups.map((group) => (
+                    <div key={`page-${group.pageNumber}`} className="space-y-2">
+                        {/* Page Group Header */}
+                        <div className={cn(
+                            "flex items-center gap-2 px-2 py-1.5 rounded-md border-l-2 transition-colors",
+                            group.pageNumber === currentPage
+                                ? "border-l-primary bg-primary/5"
+                                : "border-l-border bg-muted/30"
+                        )}>
+                            <span className="text-xs font-semibold text-foreground">
+                                Page {group.pageNumber}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                                {group.fields.length}
+                            </span>
+                        </div>
+
+                        {/* Items for this page */}
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <SortableContext
+                                items={group.fields.map(f => f.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <div className="space-y-1 pl-1">
+                                    {group.fields.map((field, index) => (
+                                        <SortableItem
+                                            key={field.id}
+                                            field={field}
+                                            isSelected={selectedFieldId === field.id}
+                                            onSelect={handleSelectField}
+                                            onDelete={deleteField}
+                                            onBringForward={bringForward}
+                                            onSendBackward={sendBackward}
+                                            onBringToFront={bringToFront}
+                                            onSendToBack={sendToBack}
+                                            onUpdateLabel={handleUpdateLabel}
+                                            onToggleVisibility={handleToggleVisibility}
+                                            onShowProperties={handleShowProperties}
+                                            allFields={fields}
+                                            isFirst={index === 0}
+                                            isLast={index === group.fields.length - 1}
+                                        />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
                     </div>
-                </SortableContext>
-            </DndContext>
+                ))}
+            </div>
 
             {/* Legend */}
             <div className="pt-3 mt-3 border-t border-border">

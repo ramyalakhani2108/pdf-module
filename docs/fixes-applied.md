@@ -174,7 +174,7 @@ ALTER TABLE pdf_inputs ADD COLUMN textColor VARCHAR(191) DEFAULT '#000000';
 
 **Environment Variables:**
 - `MAX_FILE_SIZE=104857600` (100MB)
-- `API_KEY=your-secure-api-key-here-change-in-production`
+- `API_KEY=API_KEY`
 
 **Next.js Config:**
 - `serverActions.bodySizeLimit: '100mb'`
