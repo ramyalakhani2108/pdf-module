@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { Loader2, Download, Upload, X, PenTool, ZoomIn, ZoomOut, Maximize2, Minimize2, ChevronLeft, ChevronRight, Grid3x3, Check, Bug } from 'lucide-react';
+import { Loader2, Download, Upload, X, PenTool, ZoomIn, ZoomOut, Maximize2, Minimize2, ChevronLeft, ChevronRight, Grid3x3, Check, Bug, Circle, CheckCircle, XCircle, Square, CheckSquare, Star, Heart, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PdfFile, PdfInput } from '@/lib/types';
+import { PdfFile, PdfInput, IconVariant } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { alignmentDebugger, useAlignmentTracking } from '@/utils/alignment-debug';
 import { 
@@ -13,6 +13,7 @@ import {
     calculatePreciseFieldPosition,
     logFieldPosition 
 } from '@/utils/precision-coordinates';
+import { SignaturePad } from './SignaturePad';
 
 // Configure PDF worker with optimizations for large PDFs
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -29,6 +30,23 @@ const PDF_OPTIONS = {
     // Enable streaming for faster initial load
     disableStream: false,
     disableAutoFetch: false,
+};
+
+// Icon variant to component mapping
+const iconVariantComponents: Record<string, React.ElementType> = {
+    'CHECK': Check,
+    'CROSS': X,
+    'CIRCLE': Circle,
+    'CIRCLE_CHECK': CheckCircle,
+    'CIRCLE_CROSS': XCircle,
+    'SQUARE': Square,
+    'SQUARE_CHECK': CheckSquare,
+    'STAR': Star,
+    'HEART': Heart,
+    'ARROW_RIGHT': ArrowRight,
+    'ARROW_LEFT': ArrowLeft,
+    'ARROW_UP': ArrowUp,
+    'ARROW_DOWN': ArrowDown,
 };
 
 interface PDFFormFillerProps {
@@ -52,6 +70,11 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
     const [adjustedPositions, setAdjustedPositions] = useState<Record<string, { x: number; y: number }>>({});
     const [draggingField, setDraggingField] = useState<string | null>(null);
     const [debugMode, setDebugMode] = useState(false);
+    const [smartZoomActive, setSmartZoomActive] = useState(false);
+    const [previousZoomState, setPreviousZoomState] = useState<{ mode: ViewMode; zoom: number } | null>(null);
+    // Signature pad state
+    const [signaturePadOpen, setSignaturePadOpen] = useState(false);
+    const [activeSignatureField, setActiveSignatureField] = useState<{ slug: string; label: string } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement>(null);
     
@@ -415,30 +438,25 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                     const finalX = adjustedPos ? adjustedPos.x : field.xCoord;
                                     const finalY = adjustedPos ? adjustedPos.y : field.yCoord;
                                     
-                                    // Use unified precision coordinate system
-                                    const fieldPosition = calculatePreciseFieldPosition(
-                                        finalX,
-                                        finalY,
-                                        field.width,
-                                        field.height,
-                                        field.fontSize,
-                                        pageScale,
-                                        false // isPdfMode = false for preview
-                                    );
+                                    // SIMPLE RELIABLE POSITIONING
+                                    // Multiply coordinates by scale for proper visual display
+                                    // This ensures fields appear at the correct position at any zoom level
+                                    const scaledX = finalX * pageScale;
+                                    const scaledY = finalY * pageScale;
+                                    const scaledWidth = field.width * pageScale;
+                                    const scaledHeight = field.height * pageScale;
                                     
                                     const ultraConsistentStyles: React.CSSProperties = {
                                         position: 'absolute',
-                                        left: `${fieldPosition.x}px`,
-                                        top: `${fieldPosition.y}px`,
-                                        width: `${fieldPosition.width}px`,
-                                        height: `${fieldPosition.height}px`,
+                                        left: `${scaledX}px`,
+                                        top: `${scaledY}px`,
+                                        width: `${scaledWidth}px`,
+                                        height: `${scaledHeight}px`,
                                         margin: '0px',
                                         padding: '0px',
                                         border: '0px solid transparent',
                                         outline: '0px solid transparent',
                                         boxSizing: 'border-box',
-                                        transformOrigin: '0px 0px 0px',
-                                        transform: 'translate3d(0px, 0px, 0px)',
                                         willChange: 'auto',
                                         WebkitFontSmoothing: 'antialiased',
                                         display: 'flex',
@@ -457,26 +475,28 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                         fontStyle: 'inherit',
                                     };
                                     
-                                    // Track position for debugging
-                                    useEffect(() => {
-                                        if (debugMode) {
-                                            // Real-time coordinate validation
-                                            recordPosition(field.id, {
-                                                x: fieldPosition.x,
-                                                y: fieldPosition.y,
-                                                width: fieldPosition.width,
-                                                height: fieldPosition.height,
-                                                mode: 'preview'
-                                            });
-                                            
-                                            debugField(field.id);
-                                        }
-                                    }, [debugMode, fieldPosition.x, fieldPosition.y, fieldPosition.width, fieldPosition.height, field.id]);
+                                    // Debug position tracking (moved outside useEffect to avoid hook rules violation)
+                                    // Position tracking is now done via data attributes for debugging
+                                    const debugDataAttrs = debugMode ? {
+                                        'data-debug-x': scaledX,
+                                        'data-debug-y': scaledY,
+                                        'data-debug-width': scaledWidth,
+                                        'data-debug-height': scaledHeight,
+                                        'data-debug-mode': 'preview',
+                                    } : {};
 
                                     const handleMouseDown = (e: React.MouseEvent) => {
                                         if (!adjustmentMode) return;
                                         e.preventDefault();
                                         setDraggingField(field.id);
+                                        
+                                        // Smart zoom: Auto-zoom to 300% for tiny fields to prevent placement misalignment
+                                        if ((field.width < 50 || field.height < 50) && !smartZoomActive) {
+                                            setPreviousZoomState({ mode: viewMode, zoom: customZoom });
+                                            setSmartZoomActive(true);
+                                            setViewMode('custom');
+                                            setCustomZoom(3); // 300% zoom
+                                        }
                                         
                                         const containerElement = e.currentTarget.parentElement?.parentElement;
                                         if (!containerElement) return;
@@ -506,6 +526,14 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                             document.removeEventListener('mousemove', handleMouseMove);
                                             document.removeEventListener('mouseup', handleMouseUp);
                                             
+                                            // Restore previous zoom state after dragging tiny field
+                                            if (smartZoomActive && previousZoomState) {
+                                                setSmartZoomActive(false);
+                                                setViewMode(previousZoomState.mode);
+                                                setCustomZoom(previousZoomState.zoom);
+                                                setPreviousZoomState(null);
+                                            }
+                                            
                                             // Log final position with precision
                                             if (debugMode) {
                                                 logFieldPosition(field.id, 
@@ -526,6 +554,7 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                         <div 
                                             key={field.id} 
                                             data-field-id={field.id}
+                                            {...debugDataAttrs}
                                             style={ultraConsistentStyles}
                                             className={cn(
                                                 "group/field",
@@ -541,41 +570,33 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                                     data-field-type="text"
                                                     className="w-full h-full bg-transparent border-b border-gray-400/30 focus:border-gray-600/50 focus:bg-white/10 hover:bg-white/5 transition-all outline-none"
                                                     style={{
-                                                        // REVOLUTIONARY TYPOGRAPHY PRECISION v2.0
+                                                        // Scale font size with zoom
                                                         fontSize: `${field.fontSize * pageScale}px`,
                                                         fontFamily: field.fontFamily || 'Arial, sans-serif',
                                                         fontWeight: field.fontWeight || 'normal',
                                                         fontStyle: field.fontStyle || 'normal',
                                                         textAlign: field.textAlign || 'left',
                                                         color: field.textColor || '#000000',
-                                                        // PRECISE BASELINE CALCULATION matching PDF exactly
-                                                        lineHeight: '1.0', // Exact line spacing
-                                                        // CRITICAL PADDING MATCH for PDF coordinate system
+                                                        lineHeight: '1.0',
                                                         padding: '0px 2px 0px 2px',
                                                         paddingTop: '0px',
                                                         paddingBottom: '0px',
                                                         margin: '0px',
-                                                        // EXACT VERTICAL BASELINE POSITIONING
                                                         display: 'flex',
                                                         alignItems: 'flex-start',
                                                         justifyContent: 'flex-start',
                                                         flexDirection: 'column',
-                                                        // ULTRA-CONSISTENT BOX MODEL
                                                         boxSizing: 'border-box',
                                                         border: 'none',
                                                         outline: 'none',
                                                         background: 'transparent',
-                                                        // CROSS-BROWSER TEXT RENDERING CONSISTENCY
                                                         WebkitFontSmoothing: 'antialiased',
-                                                        // PREVENT BROWSER TEXT AUTO-ADJUSTMENTS
                                                         verticalAlign: 'baseline',
                                                         textIndent: '0px',
                                                         letterSpacing: 'normal',
                                                         wordSpacing: 'normal',
-                                                        // WRITING MODE CONSISTENCY
                                                         writingMode: 'horizontal-tb',
                                                         direction: 'ltr',
-                                                        // DISABLE FIELD AUTO-RESIZE
                                                         resize: 'none',
                                                         overflow: 'hidden',
                                                         whiteSpace: 'nowrap',
@@ -592,7 +613,7 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                                     type="email"
                                                     className="w-full h-full bg-transparent border-b border-gray-400/30 focus:border-gray-600/50 focus:bg-white/10 hover:bg-white/5 transition-all outline-none"
                                                     style={{
-                                                        fontSize: `${field.fontSize * pageScale}px`,
+                                                        fontSize: `${field.fontSize}px`,
                                                         fontFamily: field.fontFamily || 'Arial, sans-serif',
                                                         fontWeight: field.fontWeight || 'normal',
                                                         fontStyle: field.fontStyle || 'normal',
@@ -632,7 +653,7 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                                     type="number"
                                                     className="w-full h-full bg-transparent border-b border-gray-400/30 focus:border-gray-600/50 focus:bg-white/10 hover:bg-white/5 transition-all outline-none"
                                                     style={{
-                                                        fontSize: `${field.fontSize * pageScale}px`,
+                                                        fontSize: `${field.fontSize}px`,
                                                         fontFamily: field.fontFamily || 'Arial, sans-serif',
                                                         fontWeight: field.fontWeight || 'normal',
                                                         fontStyle: field.fontStyle || 'normal',
@@ -672,7 +693,7 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                                     type="date"
                                                     className="w-full h-full bg-transparent border-b border-gray-400/30 focus:border-gray-600/50 focus:bg-white/10 hover:bg-white/5 transition-all outline-none"
                                                     style={{
-                                                        fontSize: `${field.fontSize * pageScale}px`,
+                                                        fontSize: `${field.fontSize}px`,
                                                         fontFamily: field.fontFamily || 'Arial, sans-serif',
                                                         fontWeight: field.fontWeight || 'normal',
                                                         fontStyle: field.fontStyle || 'normal',
@@ -706,34 +727,115 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                                 />
                                             )}
 
-                                            {field.inputType === 'CHECK' && (
-                                                <div className="w-full h-full flex items-center justify-center bg-transparent">
-                                                    <Check
-                                                        className="text-green-600"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            strokeWidth: 3,
-                                                        }}
-                                                    />
+                                            {field.inputType === 'ICON' && (
+                                                <div 
+                                                    className="w-full h-full flex items-center justify-center bg-transparent relative group/icon cursor-pointer"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        // Toggle icon visibility
+                                                        const currentValue = values[field.slug];
+                                                        const defaultValue = field.defaultVisible !== false;
+                                                        const newValue = currentValue === undefined ? !defaultValue : !currentValue;
+                                                        handleInputChange(field.slug, newValue);
+                                                    }}
+                                                    title={`Click to toggle icon visibility. Current: ${values[field.slug] === undefined ? (field.defaultVisible !== false ? 'ON' : 'OFF') : (values[field.slug] ? 'ON' : 'OFF')}`}
+                                                >
+                                                    {(() => {
+                                                        const IconComp = iconVariantComponents[field.iconVariant || 'CHECK'] || Check;
+                                                        const isVisible = values[field.slug] === undefined 
+                                                            ? field.defaultVisible !== false 
+                                                            : values[field.slug] === true;
+                                                        
+                                                        return (
+                                                            <>
+                                                                {/* Icon Preview - dimmed if off, full color if on */}
+                                                                <IconComp
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        height: '100%',
+                                                                        strokeWidth: 3,
+                                                                        stroke: field.iconColor || '#000000',
+                                                                        color: field.iconColor || '#000000',
+                                                                        opacity: isVisible ? 1 : 0.2,
+                                                                        transition: 'opacity 0.2s ease-in-out',
+                                                                    }}
+                                                                />
+                                                                {/* Toggle indicator overlay */}
+                                                                <div className={cn(
+                                                                    "absolute inset-0 flex items-center justify-center opacity-0 group-hover/icon:opacity-100 transition-opacity bg-black/10 rounded",
+                                                                )}>
+                                                                    {isVisible ? (
+                                                                        <ToggleRight className="w-4 h-4 text-green-600 drop-shadow-md" />
+                                                                    ) : (
+                                                                        <ToggleLeft className="w-4 h-4 text-red-500 drop-shadow-md" />
+                                                                    )}
+                                                                </div>
+                                                                {/* Status badge */}
+                                                                <div className={cn(
+                                                                    "absolute -top-1 -right-1 w-3 h-3 rounded-full border border-white shadow-sm",
+                                                                    isVisible ? "bg-green-500" : "bg-gray-400"
+                                                                )} />
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             )}
 
-                                            {field.inputType === 'CROSS' && (
-                                                <div className="w-full h-full flex items-center justify-center bg-transparent">
-                                                    <X
-                                                        className="text-red-600"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            strokeWidth: 3,
-                                                        }}
-                                                    />
+                                            {/* SIGNATURE FIELD - Opens Signature Pad */}
+                                            {field.inputType === 'SIGNATURE' && (
+                                                <div className="w-full h-full border border-dashed border-pink-400/50 bg-pink-50/30 hover:border-pink-500 hover:bg-pink-50/50 transition-all relative group overflow-hidden rounded">
+                                                    {values[field.slug] ? (
+                                                        <div className="relative w-full h-full flex items-center justify-center p-1">
+                                                            <img
+                                                                src={values[field.slug]}
+                                                                alt="Signature"
+                                                                className="max-w-full max-h-full object-contain"
+                                                            />
+                                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setActiveSignatureField({ slug: field.slug, label: field.label });
+                                                                        setSignaturePadOpen(true);
+                                                                    }}
+                                                                    className="p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+                                                                    title="Re-sign"
+                                                                >
+                                                                    <PenTool className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleInputChange(field.slug, null);
+                                                                    }}
+                                                                    className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                                                    title="Remove signature"
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setActiveSignatureField({ slug: field.slug, label: field.label });
+                                                                setSignaturePadOpen(true);
+                                                            }}
+                                                            className="flex flex-col items-center justify-center w-full h-full cursor-pointer text-pink-500/60 hover:text-pink-600 transition-colors"
+                                                        >
+                                                            <PenTool className="w-5 h-5 mb-1" />
+                                                            <span className="text-[10px] font-medium uppercase tracking-wider">
+                                                                Click to Sign
+                                                            </span>
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
 
-                                            {(field.inputType === 'SIGNATURE' || field.inputType === 'IMAGE') && (
-                                                <div className="w-full h-full border border-dashed border-black/30 bg-transparent hover:border-black/50 transition-all relative group overflow-hidden">
+                                            {/* IMAGE FIELD - File Upload */}
+                                            {field.inputType === 'IMAGE' && (
+                                                <div className="w-full h-full border border-dashed border-amber-400/50 bg-amber-50/30 hover:border-amber-500 hover:bg-amber-50/50 transition-all relative group overflow-hidden rounded">
                                                     {values[field.slug] ? (
                                                         <div className="relative w-full h-full flex items-center justify-center p-1">
                                                             <img
@@ -749,14 +851,10 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                                             </button>
                                                         </div>
                                                     ) : (
-                                                        <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer text-black/40 hover:text-black/60 transition-colors">
-                                                            {field.inputType === 'SIGNATURE' ? (
-                                                                <PenTool className="w-5 h-5 mb-1" />
-                                                            ) : (
-                                                                <Upload className="w-5 h-5 mb-1" />
-                                                            )}
+                                                        <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer text-amber-500/60 hover:text-amber-600 transition-colors">
+                                                            <Upload className="w-5 h-5 mb-1" />
                                                             <span className="text-[10px] font-medium uppercase tracking-wider">
-                                                                {field.inputType === 'SIGNATURE' ? 'Sign' : 'Upload'}
+                                                                Upload
                                                             </span>
                                                             <input
                                                                 type="file"
@@ -782,6 +880,21 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                 );
             })}</div>
             </div>
+
+            {/* Signature Pad Modal */}
+            <SignaturePad
+                isOpen={signaturePadOpen}
+                onClose={() => {
+                    setSignaturePadOpen(false);
+                    setActiveSignatureField(null);
+                }}
+                onSave={(signatureData) => {
+                    if (activeSignatureField) {
+                        handleInputChange(activeSignatureField.slug, signatureData);
+                    }
+                }}
+                fieldLabel={activeSignatureField?.label}
+            />
         </div>
     );
 }

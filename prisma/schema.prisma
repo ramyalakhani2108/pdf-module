@@ -26,24 +26,27 @@ model PdfFile {
 }
 
 model PdfInput {
-  id         String    @id @default(uuid())
-  pdfFileId  String
-  slug       String
-  label      String
-  inputType  InputType
-  pageNumber Int
-  xCoord     Float
-  yCoord     Float
-  width      Float
-  height     Float
-  fontSize   Int       @default(12)
-  fontFamily String?   @default("Arial, sans-serif")
-  fontWeight String?   @default("normal")
-  fontStyle  String?   @default("normal")
-  textAlign  String?   @default("left")
-  textColor  String?   @default("#000000")
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id             String    @id @default(uuid())
+  pdfFileId      String
+  slug           String
+  label          String
+  inputType      InputType
+  pageNumber     Int
+  xCoord         Float
+  yCoord         Float
+  width          Float
+  height         Float
+  fontSize       Float     @default(12)
+  fontFamily     String?   @default("Arial, sans-serif")
+  fontWeight     String?   @default("normal")
+  fontStyle      String?   @default("normal")
+  textAlign      String?   @default("left")
+  textColor      String?   @default("#000000")
+  iconVariant    String?   @default("CHECK")
+  iconColor      String?   @default("#000000")
+  defaultVisible Boolean?  @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   pdfFile PdfFile @relation(fields: [pdfFileId], references: [id], onDelete: Cascade)
 
@@ -68,10 +71,7 @@ enum InputType {
   DATE
   NUMBER
   EMAIL
-  CHECKBOX
-  RADIO
-  CHECK
-  CROSS
+  ICON
   SIGNATURE
   IMAGE
 }

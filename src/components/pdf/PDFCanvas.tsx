@@ -6,7 +6,8 @@ import { DndContext, DragEndEvent, useDroppable, DragStartEvent, DragOverEvent }
 import { restrictToParentElement } from '@dnd-kit/modifiers';
 import { useEditorStore } from '@/lib/store';
 import { DraggableField } from './DraggableField';
-import { Loader2, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Grid3x3, Ruler } from 'lucide-react';
+import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
+import { Loader2, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Grid3x3, Ruler, Keyboard, MousePointer, Crosshair, X, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -29,14 +30,21 @@ const PDF_OPTIONS = {
     disableAutoFetch: false,
 };
 
-const GRID_SIZE = 1; // Snap to 1px grid for pixel-perfect precision
+// Professional grid system - 8px and 10px units
+const GRID_OPTIONS = {
+    SMALL: 8,    // 8px grid for precise placement
+    MEDIUM: 10,  // 10px grid for standard elements
+    OFF: 1       // 1px for pixel-perfect mode
+};
 
-// Custom snap-to-grid modifier
+const CURRENT_GRID = GRID_OPTIONS.SMALL; // Default to 8px grid
+
+// Enhanced snap-to-grid modifier with professional grid spacing
 const snapToGridModifier = ({ transform }: any) => {
     return {
         ...transform,
-        x: Math.round(transform.x / GRID_SIZE) * GRID_SIZE,
-        y: Math.round(transform.y / GRID_SIZE) * GRID_SIZE,
+        x: Math.round(transform.x / CURRENT_GRID) * CURRENT_GRID,
+        y: Math.round(transform.y / CURRENT_GRID) * CURRENT_GRID,
     };
 };
 
@@ -49,7 +57,16 @@ export function PDFCanvas() {
         updateField,
         selectField,
         selectedFieldId,
-        deleteField
+        deleteField,
+        duplicateField,
+        activeTool,
+        clearActiveTool,
+        addFieldAtPosition,
+        showFieldBorders,
+        toggleFieldBorders,
+        highlightFieldType,
+        toggleHighlightAll,
+        setHighlightFieldType
     } = useEditorStore();
 
     const [zoom, setZoom] = useState(1);
@@ -61,9 +78,11 @@ export function PDFCanvas() {
     const [precisionMode, setPrecisionMode] = useState(false);
     const [autoZoom, setAutoZoom] = useState<number | null>(null);
     const [stickyZoom, setStickyZoom] = useState(false);
-    const [targetHelper, setTargetHelper] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+    const [autoZoomEnabled, setAutoZoomEnabled] = useState(true); // Toggle for auto smart zoom
     const [magnifierPosition, setMagnifierPosition] = useState<{ x: number; y: number } | null>(null);
+    const [showShortcutsModal, setShowShortcutsModal] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const pdfCanvasRef = useRef<HTMLDivElement>(null);
 
     // Droppable area for the current page
     const { setNodeRef, isOver } = useDroppable({
@@ -85,9 +104,6 @@ export function PDFCanvas() {
 
         const fieldId = active.id as string;
         
-        // Clear target helper
-        setTargetHelper(null);
-        
         // Only reset zoom if not in sticky mode
         if (autoZoom && !stickyZoom) {
             setZoom(autoZoom);
@@ -97,32 +113,27 @@ export function PDFCanvas() {
         const field = fields.find(f => f.id === fieldId);
 
         if (field) {
-            // PIXEL-PERFECT DRAG POSITIONING ALGORITHM
-            // Apply mathematical precision for exact placement where user drops
+            // PRECISE DRAG POSITIONING - Fixed position mismatch issue
+            // The key fix: directly apply the exact delta without additional transformations
+            // that could cause the element to "jump" when dropped
             
-            // Convert delta from screen pixels to PDF points with sub-pixel precision
-            const precisionFactor = 1000000;
-            
-            // Calculate exact delta in PDF coordinates
+            // Convert delta from screen pixels to PDF points (unscaled coordinates)
             const deltaXInPDF = delta.x / zoom;
             const deltaYInPDF = delta.y / zoom;
             
-            // Calculate new position with precision
-            const rawX = field.xCoord + deltaXInPDF;
-            const rawY = field.yCoord + deltaYInPDF;
+            // Calculate new position - apply delta directly to current position
+            const newX = field.xCoord + deltaXInPDF;
+            const newY = field.yCoord + deltaYInPDF;
             
-            // Apply precision rounding to eliminate floating-point errors
-            const preciseX = Math.round(rawX * precisionFactor) / precisionFactor;
-            const preciseY = Math.round(rawY * precisionFactor) / precisionFactor;
-            
-            // Snap to 1px grid for pixel-perfect alignment
-            const snappedX = Math.round(preciseX / GRID_SIZE) * GRID_SIZE;
-            const snappedY = Math.round(preciseY / GRID_SIZE) * GRID_SIZE;
+            // Clamp to canvas bounds (ensure field stays within page)
+            const clampedX = Math.max(0, newX);
+            const clampedY = Math.max(0, newY);
 
-            // Update with exact coordinates - field appears EXACTLY where dropped
+            // Update with exact coordinates - no grid snapping during drop
+            // This ensures the element stays EXACTLY where the user dropped it
             updateField(fieldId, {
-                xCoord: Math.max(0, snappedX),
-                yCoord: Math.max(0, snappedY),
+                xCoord: clampedX,
+                yCoord: clampedY,
             });
         }
         setCursorPosition(null);
@@ -132,41 +143,110 @@ export function PDFCanvas() {
         const fieldId = event.active.id as string;
         selectField(fieldId);
         
-        // Smart zoom for tiny fields (under 30px)
+        // Smart zoom for tiny fields (under 25px) - zoom to 400% for ultra-precision
+        // Only trigger if:
+        // 1. autoZoomEnabled is true
+        // 2. NOT already in sticky zoom mode (already zoomed in)
+        // 3. NOT already at high zoom (>= 2x / 200%)
         const field = fields.find(f => f.id === fieldId);
-        if (field && (field.width < 30 || field.height < 30)) {
-            // Save current zoom if not already in sticky mode
-            if (!stickyZoom) {
-                setAutoZoom(zoom);
+        if (autoZoomEnabled && !stickyZoom && zoom < 2 && field && (field.width < 25 || field.height < 25)) {
+            // Save current zoom for later restoration
+            setAutoZoom(zoom);
+            
+            const targetZoom = 4;
+            
+            // Get current scroll position and container info BEFORE zoom change
+            if (containerRef.current && pageDimensions) {
+                const container = containerRef.current;
+                const containerRect = container.getBoundingClientRect();
+                
+                // Center the field in the viewport for better UX
+                const centerOffsetX = containerRect.width / 2 - (field.width * targetZoom) / 2;
+                const centerOffsetY = containerRect.height / 2 - (field.height * targetZoom) / 2;
+                
+                // Calculate where the field will be after zoom change
+                const fieldNewX = field.xCoord * targetZoom;
+                const fieldNewY = field.yCoord * targetZoom;
+                
+                // Calculate scroll position to center the field in viewport
+                const newScrollLeft = fieldNewX - centerOffsetX;
+                const newScrollTop = fieldNewY - centerOffsetY;
+                
+                // SMOOTH ZOOM: Disable smooth scrolling temporarily for instant positioning
+                container.style.scrollBehavior = 'auto';
+                
+                // Batch the state updates together
+                setZoom(targetZoom);
+                setStickyZoom(true);
+                
+                // Immediately set scroll position synchronously
+                container.scrollLeft = newScrollLeft;
+                container.scrollTop = newScrollTop;
+                
+                // Re-enable smooth scrolling after a brief delay
+                setTimeout(() => {
+                    container.style.scrollBehavior = '';
+                }, 50);
+            } else {
+                setZoom(targetZoom);
+                setStickyZoom(true);
             }
+        }
+    }, [selectField, fields, zoom, stickyZoom, pageDimensions, autoZoomEnabled]);
+
+    // Smart zoom handler for tiny fields - triggered by magnifying glass button
+    // This is manual, so it should work even at high zoom to recenter on the field
+    const handleSmartZoom = useCallback((fieldId: string) => {
+        const field = fields.find(f => f.id === fieldId);
+        if (!field) return;
+        
+        // Select the field first
+        selectField(fieldId);
+        
+        // If already at 400% zoom, just recenter without changing zoom
+        const targetZoom = 4;
+        const isAlreadyAtTargetZoom = zoom >= 3.9; // Close to 400%
+        
+        // Save current zoom if not already in sticky mode and not at target zoom
+        if (!stickyZoom && !isAlreadyAtTargetZoom) {
+            setAutoZoom(zoom);
+        }
+        
+        // Get current scroll position and container info
+        if (containerRef.current && pageDimensions) {
+            const container = containerRef.current;
+            const containerRect = container.getBoundingClientRect();
             
-            // Zoom to 300% for ultra-precision with tiny fields
-            setZoom(3);
-            setStickyZoom(true);
+            // Use current zoom if already at high zoom, otherwise use target
+            const effectiveZoom = isAlreadyAtTargetZoom ? zoom : targetZoom;
             
-            // Show visual target helper
-            setTargetHelper({
-                x: field.xCoord,
-                y: field.yCoord,
-                width: field.width,
-                height: field.height
+            // Center the field in the viewport for better UX
+            const centerOffsetX = containerRect.width / 2 - (field.width * effectiveZoom) / 2;
+            const centerOffsetY = containerRect.height / 2 - (field.height * effectiveZoom) / 2;
+            
+            // Calculate where the field will be
+            const fieldNewX = field.xCoord * effectiveZoom;
+            const fieldNewY = field.yCoord * effectiveZoom;
+            
+            // Calculate scroll position to center the field in viewport
+            const newScrollLeft = fieldNewX - centerOffsetX;
+            const newScrollTop = fieldNewY - centerOffsetY;
+            
+            // Smooth scroll to the field position
+            container.scrollTo({
+                left: newScrollLeft,
+                top: newScrollTop,
+                behavior: 'smooth'
             });
             
-            // Auto-center the field in viewport after zoom
-            setTimeout(() => {
-                if (containerRef.current && pageDimensions) {
-                    const container = containerRef.current;
-                    const fieldCenterX = (field.xCoord + field.width / 2) * 3;
-                    const fieldCenterY = (field.yCoord + field.height / 2) * 3;
-                    
-                    // Smooth scroll to center
-                    container.scrollTo({
-                        left: fieldCenterX - container.clientWidth / 2,
-                        top: fieldCenterY - container.clientHeight / 2,
-                        behavior: 'smooth'
-                    });
-                }
-            }, 100);
+            // Only change zoom if not already at target
+            if (!isAlreadyAtTargetZoom) {
+                setZoom(targetZoom);
+                setStickyZoom(true);
+            }
+        } else if (!isAlreadyAtTargetZoom) {
+            setZoom(targetZoom);
+            setStickyZoom(true);
         }
     }, [selectField, fields, zoom, stickyZoom, pageDimensions]);
 
@@ -198,47 +278,191 @@ export function PDFCanvas() {
         setCursorPosition(null);
     }, []);
 
+    // Handle click on PDF canvas to place field
+    const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (!activeTool || !pdfCanvasRef.current || !pageDimensions) return;
+        
+        // Prevent click if dragging
+        if (e.defaultPrevented) return;
+        
+        const canvasRect = pdfCanvasRef.current.getBoundingClientRect();
+        const clickX = e.clientX - canvasRect.left;
+        const clickY = e.clientY - canvasRect.top;
+        
+        // Convert from screen coordinates to PDF coordinates (unscaled)
+        const pdfX = clickX / zoom;
+        const pdfY = clickY / zoom;
+        
+        // Ensure click is within bounds
+        if (pdfX >= 0 && pdfY >= 0 && 
+            pdfX <= pageDimensions.width && pdfY <= pageDimensions.height) {
+            addFieldAtPosition({ x: pdfX, y: pdfY });
+        }
+    }, [activeTool, zoom, pageDimensions, addFieldAtPosition]);
+
+    // Keyboard shortcuts handler
+    const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        // Don't handle shortcuts if typing in an input field
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+            return;
+        }
+
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const cmdKey = isMac ? e.metaKey : e.ctrlKey;
+
+        // ESC to cancel active tool
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            if (activeTool) {
+                clearActiveTool();
+                return;
+            }
+            selectField(null);
+            setShowShortcutsModal(false);
+            return;
+        }
+
+        // Show shortcuts modal with ? key
+        if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+            e.preventDefault();
+            setShowShortcutsModal(true);
+            return;
+        }
+
+        // Toggle grid with G key
+        if (e.key === 'g' || e.key === 'G') {
+            if (!cmdKey) {
+                e.preventDefault();
+                setShowGrid(prev => !prev);
+                return;
+            }
+        }
+
+        // Toggle rulers with R key
+        if (e.key === 'r' || e.key === 'R') {
+            if (!cmdKey) {
+                e.preventDefault();
+                setShowRulers(prev => !prev);
+                return;
+            }
+        }
+
+        // Toggle highlight all fields with Cmd/Ctrl + Shift + H
+        if (cmdKey && e.shiftKey && (e.key === 'h' || e.key === 'H')) {
+            e.preventDefault();
+            toggleHighlightAll();
+            return;
+        }
+
+        // Zoom controls - max 400% for precision editing
+        if (cmdKey && (e.key === '=' || e.key === '+')) {
+            e.preventDefault();
+            setZoom(z => Math.min(4, z + 0.1));
+            return;
+        }
+        if (cmdKey && e.key === '-') {
+            e.preventDefault();
+            setZoom(z => Math.max(0.3, z - 0.1));
+            return;
+        }
+        if (cmdKey && e.key === '0') {
+            e.preventDefault();
+            setZoom(1);
+            setStickyZoom(false);
+            setAutoZoom(null);
+            return;
+        }
+
+        // If no field is selected, don't process field-specific shortcuts
+        if (!selectedFieldId) return;
+
+        const selectedField = fields.find(f => f.id === selectedFieldId);
+        if (!selectedField) return;
+
+        // Delete selected field with Delete or Backspace
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            e.preventDefault();
+            deleteField(selectedFieldId);
+            return;
+        }
+
+        // Duplicate selected field with Cmd/Ctrl + D
+        if (cmdKey && (e.key === 'd' || e.key === 'D')) {
+            e.preventDefault();
+            duplicateField(selectedFieldId);
+            return;
+        }
+
+        // Arrow keys for precise movement
+        const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+        if (arrowKeys.includes(e.key)) {
+            e.preventDefault();
+            
+            // Determine movement amount: 1px normal, 10px with Shift, 50px with Cmd/Ctrl
+            let moveAmount = 1;
+            if (cmdKey) {
+                moveAmount = 50;
+            } else if (e.shiftKey) {
+                moveAmount = 10;
+            }
+
+            let newX = selectedField.xCoord;
+            let newY = selectedField.yCoord;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                    newY = Math.max(0, selectedField.yCoord - moveAmount);
+                    break;
+                case 'ArrowDown':
+                    newY = selectedField.yCoord + moveAmount;
+                    break;
+                case 'ArrowLeft':
+                    newX = Math.max(0, selectedField.xCoord - moveAmount);
+                    break;
+                case 'ArrowRight':
+                    newX = selectedField.xCoord + moveAmount;
+                    break;
+            }
+
+            updateField(selectedFieldId, { xCoord: newX, yCoord: newY });
+            return;
+        }
+    }, [selectedFieldId, fields, deleteField, duplicateField, updateField, selectField, activeTool, clearActiveTool, toggleHighlightAll]);
+
+    // Add keyboard event listener
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [handleKeyDown]);
+
     if (!currentPdf) return null;
 
     // Filter fields for current page
     const pageFields = fields.filter(f => f.pageNumber === currentPage);
 
     return (
-        <div className="flex flex-col h-full w-full bg-slate-900 p-4 gap-4">
-            {/* Tiny Field Helper Banner */}
-            {stickyZoom && (
-                <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-4 rounded-lg shadow-lg border-2 border-green-300 animate-pulse">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-white/20 p-2 rounded-full">
-                                <ZoomIn className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-lg">🎯 Tiny Field Mode (300% Zoom)</h3>
-                                <p className="text-sm text-white/90">
-                                    Field is auto-centered and zoomed for pixel-perfect placement. 
-                                    <span className="font-semibold"> Drag to fine-tune position</span> with 1px precision.
-                                </p>
-                            </div>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                                setStickyZoom(false);
-                                if (autoZoom) {
-                                    setZoom(autoZoom);
-                                    setAutoZoom(null);
-                                } else {
-                                    setZoom(1);
-                                }
-                                setTargetHelper(null);
-                            }}
-                            className="bg-white/20 hover:bg-white/30 text-white border-2 border-white/50"
-                        >
-                            Exit Zoom Mode
-                        </Button>
+        <div className="flex flex-col h-full w-full bg-slate-900 p-4 gap-4 overflow-hidden">
+            {/* Active Tool Banner - Clean and minimal */}
+            {activeTool && (
+                <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Crosshair className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                            Click to place: {activeTool.type === 'ICON' ? `${activeTool.iconVariant} Icon` : `${activeTool.type} Field`}
+                        </span>
+                        <span className="text-xs text-blue-200 ml-2">
+                            (ESC to cancel)
+                        </span>
                     </div>
+                    <button
+                        onClick={clearActiveTool}
+                        className="p-1 hover:bg-white/20 rounded transition-colors"
+                        title="Cancel (ESC)"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
                 </div>
             )}
 
@@ -283,10 +507,31 @@ export function PDFCanvas() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setZoom(s => Math.min(2, s + 0.1))}
+                        onClick={() => setZoom(s => Math.min(4, s + 0.1))}
                         className="text-white hover:bg-slate-700"
+                        title="Zoom In (max 400%)"
                     >
                         <ZoomIn className="w-4 h-4" />
+                    </Button>
+                    
+                    {/* Separator */}
+                    <div className="w-px h-6 bg-slate-600" />
+                    
+                    {/* Auto Zoom Toggle */}
+                    <Button
+                        variant={autoZoomEnabled ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setAutoZoomEnabled(!autoZoomEnabled)}
+                        className={cn(
+                            "text-xs gap-1",
+                            autoZoomEnabled 
+                                ? "bg-emerald-600 text-white hover:bg-emerald-700" 
+                                : "text-white hover:bg-slate-700"
+                        )}
+                        title={autoZoomEnabled ? "Auto-zoom ON: Tiny fields auto-zoom to 400%" : "Auto-zoom OFF: Manual zoom only"}
+                    >
+                        <Crosshair className="w-3 h-3" />
+                        Auto
                     </Button>
                 </div>
 
@@ -298,7 +543,7 @@ export function PDFCanvas() {
                         className={cn(
                             showGrid ? "bg-blue-600 text-white" : "text-white hover:bg-slate-700"
                         )}
-                        title="Toggle Grid (Snap to 5px)"
+                        title="Toggle Grid (8px Professional Grid)"
                     >
                         <Grid3x3 className="w-4 h-4" />
                     </Button>
@@ -312,6 +557,19 @@ export function PDFCanvas() {
                         title="Toggle Rulers"
                     >
                         <Ruler className="w-4 h-4" />
+                    </Button>
+                    <Button
+                        variant={highlightFieldType ? 'default' : 'ghost'}
+                        size="icon"
+                        onClick={toggleHighlightAll}
+                        className={cn(
+                            highlightFieldType === 'ALL' ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white ring-2 ring-purple-400" : 
+                            highlightFieldType ? "bg-purple-600 text-white" : 
+                            "text-white hover:bg-slate-700"
+                        )}
+                        title="Highlight All Fields (⌘+Shift+H) - Shows each type in its color"
+                    >
+                        <Eye className="w-4 h-4" />
                     </Button>
                     <Button
                         variant={precisionMode ? 'default' : 'ghost'}
@@ -338,19 +596,45 @@ export function PDFCanvas() {
                                 } else {
                                     setZoom(1);
                                 }
-                                setTargetHelper(null);
                             }}
                             className="bg-blue-600 text-white ring-2 ring-blue-400 hover:bg-blue-700 animate-pulse"
-                            title="Exit Sticky Zoom (300%) - Click to return to normal view"
+                            title="Exit Sticky Zoom (400%) - Click to return to normal view"
                         >
                             <ZoomOut className="w-4 h-4" />
                         </Button>
                     )}
+
+                    {/* Separator */}
+                    <div className="w-px h-6 bg-slate-600 mx-1" />
+
+                    {/* Active Tool Cancel Button */}
+                    {activeTool && (
+                        <Button
+                            variant="default"
+                            size="sm"
+                            onClick={clearActiveTool}
+                            className="bg-blue-600 hover:bg-blue-700 text-white gap-1 text-xs"
+                        >
+                            <MousePointer className="w-3 h-3" />
+                            Deselect Tool
+                        </Button>
+                    )}
+
+                    {/* Keyboard Shortcuts Button */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowShortcutsModal(true)}
+                        className="text-white hover:bg-slate-700"
+                        title="Keyboard Shortcuts (?)"
+                    >
+                        <Keyboard className="w-4 h-4" />
+                    </Button>
                 </div>
             </div>
 
             {/* Canvas with Rulers */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                 {/* Horizontal Ruler */}
                 {showRulers && (
                     <div className="h-6 bg-slate-700 border-b border-slate-600 flex items-end overflow-hidden">
@@ -376,7 +660,7 @@ export function PDFCanvas() {
                     </div>
                 )}
 
-                <div className="flex-1 flex overflow-hidden">
+                <div className="flex-1 flex overflow-hidden min-h-0">
                     {/* Vertical Ruler */}
                     {showRulers && (
                         <div className="w-6 bg-slate-700 border-r border-slate-600 overflow-hidden">
@@ -401,33 +685,65 @@ export function PDFCanvas() {
                         </div>
                     )}
 
-                    {/* Main Canvas */}
+                    {/* Main Canvas - Full scroll access at any zoom level */}
                     <div
                         ref={containerRef}
-                        className="flex-1 overflow-auto flex justify-center items-start p-8 bg-slate-900"
+                        className="flex-1 overflow-auto bg-slate-900 min-w-0 min-h-0"
+                        style={{ 
+                            cursor: activeTool ? 'crosshair' : 'default',
+                            // Enhanced scroll behavior for high zoom navigation
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: 'rgba(100, 116, 139, 0.5) transparent',
+                        }}
                         onMouseMove={handleMouseMove}
                         onMouseLeave={handleMouseLeave}
                     >
+                        {/* Inner wrapper - centers PDF at low zoom, allows full scroll at high zoom */}
+                        <div 
+                            style={{
+                                // Display as table to auto-size to content while allowing centering
+                                display: 'table',
+                                // Margin auto centers when content is smaller than container
+                                margin: '0 auto',
+                                // Minimum height to enable vertical centering at low zoom
+                                minHeight: '100%',
+                                // Padding around the PDF
+                                padding: '32px',
+                                // Box sizing
+                                boxSizing: 'border-box',
+                            }}
+                        >
                         <DndContext
                             onDragEnd={handleDragEnd}
                             onDragStart={handleDragStart}
                             onDragOver={handleDragOver}
-                            modifiers={[snapToGridModifier, restrictToParentElement]}
+                            modifiers={[restrictToParentElement]}
                         >
                             <div
-                                ref={setNodeRef}
+                                ref={(node) => {
+                                    setNodeRef(node);
+                                    (pdfCanvasRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+                                }}
+                                onClick={handleCanvasClick}
                                 className={cn(
-                                    "relative shadow-2xl transition-all bg-white",
-                                    isOver && "ring-4 ring-blue-500 ring-offset-4 ring-offset-slate-900"
+                                    "relative shadow-2xl bg-white",
+                                    isOver && "ring-4 ring-blue-500 ring-offset-4 ring-offset-slate-900",
+                                    activeTool && "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900"
                                 )}
                                 style={{
+                                    cursor: activeTool ? 'crosshair' : 'default',
                                     width: pageDimensions ? pageDimensions.width * zoom : 'auto',
                                     height: pageDimensions ? pageDimensions.height * zoom : 'auto',
+                                    // Prevent shrinking
+                                    flexShrink: 0,
+                                    // Disable transition during sticky zoom for instant position-preserving zoom
+                                    transition: stickyZoom ? 'none' : 'width 0.3s ease-out, height 0.3s ease-out',
                                     backgroundImage: showGrid ? `
-                                        linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-                                        linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
+                                        linear-gradient(rgba(59, 130, 246, 0.08) 1px, transparent 1px),
+                                        linear-gradient(90deg, rgba(59, 130, 246, 0.08) 1px, transparent 1px)
                                     ` : 'none',
-                                    backgroundSize: showGrid ? `${GRID_SIZE * zoom}px ${GRID_SIZE * zoom}px` : 'auto',
+                                    backgroundSize: showGrid ? `${CURRENT_GRID * zoom}px ${CURRENT_GRID * zoom}px` : 'auto',
+                                    backgroundPosition: showGrid ? '0 0' : 'auto',
                                 }}
                             >
                         <Document
@@ -455,40 +771,7 @@ export function PDFCanvas() {
                             />
                         </Document>
 
-                                {/* Target Helper - Shows precise placement zone for tiny fields */}
-                                {targetHelper && (
-                                    <div
-                                        className="absolute pointer-events-none z-[9]"
-                                        style={{
-                                            left: targetHelper.x * zoom,
-                                            top: targetHelper.y * zoom,
-                                            width: Math.max(targetHelper.width * zoom, 60),
-                                            height: Math.max(targetHelper.height * zoom, 60),
-                                            transform: 'translate(-10px, -10px)',
-                                        }}
-                                    >
-                                        {/* Pulsing border */}
-                                        <div className="absolute inset-0 border-4 border-green-400 rounded-lg animate-pulse" />
-                                        
-                                        {/* Corner markers */}
-                                        <div className="absolute -top-2 -left-2 w-4 h-4 bg-green-500 rounded-full" />
-                                        <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full" />
-                                        <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-green-500 rounded-full" />
-                                        <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-green-500 rounded-full" />
-                                        
-                                        {/* Center crosshair */}
-                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                            <div className="w-12 h-0.5 bg-green-500" />
-                                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-12 bg-green-500" />
-                                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-green-500 rounded-full" />
-                                        </div>
-                                        
-                                        {/* Size label */}
-                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                                            {targetHelper.width}×{targetHelper.height}px Target Zone
-                                        </div>
-                                    </div>
-                                )}
+
 
                                 {/* Overlay Layer */}
                                 <div className="absolute inset-0 z-10">
@@ -500,23 +783,33 @@ export function PDFCanvas() {
                                             onSelect={selectField}
                                             onDelete={deleteField}
                                             scale={zoom}
+                                            showBorder={showFieldBorders}
+                                            highlightType={
+                                                // When a tool is selected from sidebar, highlight only that type
+                                                activeTool 
+                                                    ? activeTool.type 
+                                                    : highlightFieldType
+                                            }
+                                            onSmartZoom={handleSmartZoom}
                                         />
                                     ))}
                                 </div>
+
+
 
                                 {/* Coordinates Display */}
                                 {cursorPosition && (
                                     <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl border-2 border-white pointer-events-none">
                                         X: {Math.round(cursorPosition.x / zoom)} Y: {Math.round(cursorPosition.y / zoom)} px
                                         {precisionMode && <span className="ml-2 text-green-200">🎯 PRECISION</span>}
-                                        {stickyZoom && <span className="ml-2 text-yellow-200">⚡ 300% ZOOM</span>}
+                                        {stickyZoom && <span className="ml-2 text-yellow-200">⚡ 400% ZOOM</span>}
                                     </div>
                                 )}
                                 
                                 {/* Enhanced Magnifier for Precision Mode */}
                                 {precisionMode && magnifierPosition && pageDimensions && (
                                     <div 
-                                        className="absolute pointer-events-none z-[100]"
+                                        className="absolute pointer-events-none z-50"
                                         style={{
                                             left: Math.min(magnifierPosition.x + 30, pageDimensions.width * zoom - 250),
                                             top: Math.max(magnifierPosition.y - 220, 10),
@@ -572,9 +865,138 @@ export function PDFCanvas() {
                                 )}
                             </div>
                         </DndContext>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {/* Floating Exit Zoom Panel - Always visible when at high zoom */}
+            {stickyZoom && zoom > 2 && (
+                <div className="fixed bottom-6 right-6 z-[100] animate-fade-in">
+                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-2xl p-4 border-2 border-white/20">
+                        <div className="flex items-center gap-4">
+                            <div className="text-white">
+                                <div className="text-lg font-bold flex items-center gap-2">
+                                    <ZoomIn className="w-5 h-5" />
+                                    {Math.round(zoom * 100)}% Zoom
+                                </div>
+                                <p className="text-xs text-blue-100 mt-1">
+                                    Press <kbd className="px-1.5 py-0.5 bg-white/20 rounded text-[10px] font-mono">⌘+0</kbd> or click to exit
+                                </p>
+                            </div>
+                            <Button
+                                variant="default"
+                                size="lg"
+                                onClick={() => {
+                                    setStickyZoom(false);
+                                    if (autoZoom) {
+                                        setZoom(autoZoom);
+                                        setAutoZoom(null);
+                                    } else {
+                                        setZoom(1);
+                                    }
+                                }}
+                                className="bg-white text-blue-600 hover:bg-blue-50 font-bold shadow-lg"
+                            >
+                                <ZoomOut className="w-5 h-5 mr-2" />
+                                Exit Zoom
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Floating Highlight Legend */}
+            {(highlightFieldType || activeTool) && (
+                <div className="fixed bottom-6 left-6 z-[100] animate-fade-in">
+                    <div className="bg-slate-800 text-white rounded-xl shadow-2xl p-4 border border-slate-600">
+                        <div className="flex items-center justify-between gap-4 mb-3">
+                            <div className="flex items-center gap-2">
+                                <Eye className="w-4 h-4 text-purple-400" />
+                                <span className="text-sm font-bold">
+                                    {activeTool 
+                                        ? `Highlighting: ${activeTool.type} fields` 
+                                        : 'Field Type Legend'}
+                                </span>
+                            </div>
+                            {!activeTool && (
+                                <button 
+                                    onClick={toggleHighlightAll}
+                                    className="px-2 py-1 bg-white/10 rounded text-xs hover:bg-white/20 transition-colors"
+                                >
+                                    Hide (⌘⇧H)
+                                </button>
+                            )}
+                        </div>
+                        
+                        {/* Color Legend */}
+                        <div className="grid grid-cols-4 gap-2 text-[10px]">
+                            <div className={cn(
+                                "flex items-center gap-1.5 px-2 py-1 rounded",
+                                (highlightFieldType === 'ALL' || highlightFieldType === 'TEXT' || activeTool?.type === 'TEXT') 
+                                    ? "bg-blue-500/30 ring-1 ring-blue-500" : "bg-slate-700/50"
+                            )}>
+                                <div className="w-2.5 h-2.5 rounded-sm bg-blue-500"></div>
+                                <span>TEXT</span>
+                            </div>
+                            <div className={cn(
+                                "flex items-center gap-1.5 px-2 py-1 rounded",
+                                (highlightFieldType === 'ALL' || highlightFieldType === 'DATE' || activeTool?.type === 'DATE') 
+                                    ? "bg-orange-500/30 ring-1 ring-orange-500" : "bg-slate-700/50"
+                            )}>
+                                <div className="w-2.5 h-2.5 rounded-sm bg-orange-500"></div>
+                                <span>DATE</span>
+                            </div>
+                            <div className={cn(
+                                "flex items-center gap-1.5 px-2 py-1 rounded",
+                                (highlightFieldType === 'ALL' || highlightFieldType === 'NUMBER' || activeTool?.type === 'NUMBER') 
+                                    ? "bg-green-500/30 ring-1 ring-green-500" : "bg-slate-700/50"
+                            )}>
+                                <div className="w-2.5 h-2.5 rounded-sm bg-green-500"></div>
+                                <span>NUMBER</span>
+                            </div>
+                            <div className={cn(
+                                "flex items-center gap-1.5 px-2 py-1 rounded",
+                                (highlightFieldType === 'ALL' || highlightFieldType === 'EMAIL' || activeTool?.type === 'EMAIL') 
+                                    ? "bg-cyan-500/30 ring-1 ring-cyan-500" : "bg-slate-700/50"
+                            )}>
+                                <div className="w-2.5 h-2.5 rounded-sm bg-cyan-500"></div>
+                                <span>EMAIL</span>
+                            </div>
+                            <div className={cn(
+                                "flex items-center gap-1.5 px-2 py-1 rounded",
+                                (highlightFieldType === 'ALL' || highlightFieldType === 'ICON' || activeTool?.type === 'ICON') 
+                                    ? "bg-purple-500/30 ring-1 ring-purple-500" : "bg-slate-700/50"
+                            )}>
+                                <div className="w-2.5 h-2.5 rounded-sm bg-purple-500"></div>
+                                <span>ICON</span>
+                            </div>
+                            <div className={cn(
+                                "flex items-center gap-1.5 px-2 py-1 rounded",
+                                (highlightFieldType === 'ALL' || highlightFieldType === 'SIGNATURE' || activeTool?.type === 'SIGNATURE') 
+                                    ? "bg-pink-500/30 ring-1 ring-pink-500" : "bg-slate-700/50"
+                            )}>
+                                <div className="w-2.5 h-2.5 rounded-sm bg-pink-500"></div>
+                                <span>SIGNATURE</span>
+                            </div>
+                            <div className={cn(
+                                "flex items-center gap-1.5 px-2 py-1 rounded col-span-2",
+                                (highlightFieldType === 'ALL' || highlightFieldType === 'IMAGE' || activeTool?.type === 'IMAGE') 
+                                    ? "bg-amber-500/30 ring-1 ring-amber-500" : "bg-slate-700/50"
+                            )}>
+                                <div className="w-2.5 h-2.5 rounded-sm bg-amber-500"></div>
+                                <span>IMAGE</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Keyboard Shortcuts Modal */}
+            <KeyboardShortcutsModal 
+                isOpen={showShortcutsModal} 
+                onClose={() => setShowShortcutsModal(false)} 
+            />
         </div>
     );
 }

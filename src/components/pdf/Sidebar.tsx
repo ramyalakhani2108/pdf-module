@@ -1,24 +1,42 @@
 'use client';
 
-import { useEditorStore } from '@/lib/store';
+import { useEditorStore, ActiveTool } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { InputType } from '@/lib/types';
+import { InputType, IconVariant } from '@/lib/types';
 import {
-    Type, Calendar, Hash, Mail, CheckSquare, Circle,
-    PenTool, Image as ImageIcon, Save, Trash2, Settings, Check, X as XIcon
+    Type, Calendar, Hash, Mail, PenTool, Image as ImageIcon, 
+    Save, Trash2, Settings, Check, X as XIcon, Circle, 
+    CheckCircle, XCircle, Square, CheckSquare, Star, Heart,
+    ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronDown, Shapes,
+    ToggleLeft, ToggleRight, Eye, EyeOff, MousePointer, Crosshair
 } from 'lucide-react';
 import { cn, generateSlug } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { ICON_VARIANTS, ICON_COLORS, FONT_CONFIG } from '@/lib/constants';
+
+// Icon mapping for lucide-react icons
+const iconComponentMap: Record<string, React.ElementType> = {
+    'Check': Check,
+    'X': XIcon,
+    'Circle': Circle,
+    'CheckCircle': CheckCircle,
+    'XCircle': XCircle,
+    'Square': Square,
+    'CheckSquare': CheckSquare,
+    'Star': Star,
+    'Heart': Heart,
+    'ArrowRight': ArrowRight,
+    'ArrowLeft': ArrowLeft,
+    'ArrowUp': ArrowUp,
+    'ArrowDown': ArrowDown,
+};
 
 const fieldTypes: { type: InputType; label: string; icon: React.ElementType }[] = [
     { type: 'TEXT', label: 'Text Field', icon: Type },
     { type: 'DATE', label: 'Date Picker', icon: Calendar },
     { type: 'NUMBER', label: 'Number', icon: Hash },
     { type: 'EMAIL', label: 'Email', icon: Mail },
-    { type: 'CHECKBOX', label: 'Checkbox', icon: CheckSquare },
-    { type: 'RADIO', label: 'Radio Group', icon: Circle },
-    { type: 'CHECK', label: 'Check Icon', icon: Check },
-    { type: 'CROSS', label: 'Cross Icon', icon: XIcon },
+    { type: 'ICON', label: 'Icons', icon: Shapes },
     { type: 'SIGNATURE', label: 'Signature', icon: PenTool },
     { type: 'IMAGE', label: 'Image', icon: ImageIcon },
 ];
@@ -32,59 +50,70 @@ export function Sidebar() {
         fields,
         updateField,
         deleteField,
-        selectField
+        selectField,
+        activeTool,
+        setActiveTool,
+        clearActiveTool
     } = useEditorStore();
 
     const [saving, setSaving] = useState(false);
+    const [iconDropdownOpen, setIconDropdownOpen] = useState(false);
+    const [selectedIconColor, setSelectedIconColor] = useState('#000000');
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIconDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Handle ESC key to deselect tool
+    useEffect(() => {
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === 'Escape' && activeTool) {
+                clearActiveTool();
+            }
+        }
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [activeTool, clearActiveTool]);
 
     const selectedField = fields.find(f => f.id === selectedFieldId);
 
-    const handleAddField = (type: InputType) => {
-        const label = `New ${type.toLowerCase()}`;
-        
-        // Smart default sizes based on input type
-        let width = 200;
-        let height = 35;
-        let fontSize = 14;
-        
-        if (type === 'CHECKBOX' || type === 'RADIO') {
-            width = 25;
-            height = 25;
-        } else if (type === 'CHECK' || type === 'CROSS') {
-            width = 30;
-            height = 30;
-        } else if (type === 'TEXT' || type === 'EMAIL') {
-            width = 250;
-            height = 35;
-            fontSize = 14;
-        } else if (type === 'NUMBER') {
-            width = 120;
-            height = 35;
-            fontSize = 14;
-        } else if (type === 'DATE') {
-            width = 150;
-            height = 35;
-            fontSize = 14;
-        } else if (type === 'SIGNATURE') {
-            width = 300;
-            height = 80;
-        } else if (type === 'IMAGE') {
-            width = 200;
-            height = 150;
+    // Toggle tool selection (click again to deselect)
+    const handleToolSelect = (type: InputType, iconVariant?: IconVariant, iconColor?: string) => {
+        // If clicking the same tool, deselect it
+        if (activeTool?.type === type && 
+            (type !== 'ICON' || activeTool.iconVariant === iconVariant)) {
+            clearActiveTool();
+            return;
         }
         
-        addField({
-            pdfFileId: currentPdf!.id,
-            slug: generateSlug(label) + '_' + Date.now(),
-            label,
-            inputType: type,
-            pageNumber: currentPage,
-            xCoord: 100,
-            yCoord: 100,
-            width,
-            height,
-            fontSize,
+        // Set the active tool
+        setActiveTool({
+            type,
+            iconVariant: type === 'ICON' ? iconVariant : undefined,
+            iconColor: type === 'ICON' ? (iconColor || selectedIconColor) : undefined,
         });
+        
+        // Close icon dropdown after selection
+        if (type === 'ICON') {
+            setIconDropdownOpen(false);
+        }
+    };
+
+    // Legacy function for backwards compatibility
+    const handleAddField = (type: InputType, iconVariant?: IconVariant, iconColor?: string) => {
+        handleToolSelect(type, iconVariant, iconColor);
+    };
+
+    const handleAddIconField = (variant: IconVariant) => {
+        handleToolSelect('ICON', variant, selectedIconColor);
     };
 
     const handleSave = async () => {
@@ -144,19 +173,149 @@ export function Sidebar() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {/* Active Tool Indicator - Clean and minimal */}
+                {activeTool && (
+                    <div className="bg-blue-600 text-white rounded-lg p-3 shadow-md">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Crosshair className="w-4 h-4" />
+                                <span className="text-sm font-medium">
+                                    {activeTool.type === 'ICON' 
+                                        ? `${activeTool.iconVariant} Icon` 
+                                        : `${activeTool.type} Field`}
+                                </span>
+                            </div>
+                            <button
+                                onClick={clearActiveTool}
+                                className="p-1 hover:bg-white/20 rounded transition-colors"
+                                title="Cancel (ESC)"
+                            >
+                                <XIcon className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <p className="text-xs text-blue-100 mt-1">
+                            Click on PDF to place • ESC to cancel
+                        </p>
+                    </div>
+                )}
+
                 {/* Field Types */}
                 <div className="space-y-3">
-                    <h3 className="text-sm font-medium text-muted-foreground">Add Fields</h3>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-muted-foreground">Select Tool</h3>
+                        {activeTool && (
+                            <button
+                                onClick={clearActiveTool}
+                                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                            >
+                                <MousePointer className="w-3 h-3" />
+                                Deselect
+                            </button>
+                        )}
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                         {fieldTypes.map((item) => (
-                            <button
-                                key={item.type}
-                                onClick={() => handleAddField(item.type)}
-                                className="flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-accent hover:text-accent-foreground transition-colors gap-2"
-                            >
-                                <item.icon className="w-5 h-5" />
-                                <span className="text-xs font-medium">{item.label}</span>
-                            </button>
+                            item.type === 'ICON' ? (
+                                <div key={item.type} className="relative" ref={dropdownRef}>
+                                    <button
+                                        onClick={() => setIconDropdownOpen(!iconDropdownOpen)}
+                                        className={cn(
+                                            "w-full flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-accent hover:text-accent-foreground transition-all gap-2",
+                                            iconDropdownOpen && "ring-2 ring-primary bg-accent",
+                                            activeTool?.type === 'ICON' && "ring-2 ring-blue-500 bg-blue-50 border-blue-300"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            <item.icon className={cn(
+                                                "w-5 h-5",
+                                                activeTool?.type === 'ICON' && "text-blue-600"
+                                            )} />
+                                            <ChevronDown className={cn(
+                                                "w-3 h-3 transition-transform", 
+                                                iconDropdownOpen && "rotate-180"
+                                            )} />
+                                        </div>
+                                        <span className={cn(
+                                            "text-xs font-medium",
+                                            activeTool?.type === 'ICON' && "text-blue-600"
+                                        )}>
+                                            {activeTool?.type === 'ICON' ? `✓ ${activeTool.iconVariant}` : item.label}
+                                        </span>
+                                    </button>
+                                    
+                                    {/* Icons Dropdown */}
+                                    {iconDropdownOpen && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl z-50 p-3 space-y-3 min-w-[280px]">
+                                            {/* Color Selection */}
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-medium text-muted-foreground">Icon Color</label>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {ICON_COLORS.map((color) => (
+                                                        <button
+                                                            key={color.value}
+                                                            onClick={() => setSelectedIconColor(color.value)}
+                                                            className={cn(
+                                                                "w-6 h-6 rounded-full border-2 transition-all",
+                                                                selectedIconColor === color.value 
+                                                                    ? "ring-2 ring-primary ring-offset-2" 
+                                                                    : "border-gray-200 hover:scale-110"
+                                                            )}
+                                                            style={{ backgroundColor: color.value }}
+                                                            title={color.label}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Icon Selection */}
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-medium text-muted-foreground">Select Icon</label>
+                                                <div className="grid grid-cols-4 gap-1.5 max-h-[200px] overflow-y-auto">
+                                                    {ICON_VARIANTS.map((variant) => {
+                                                        const IconComp = iconComponentMap[variant.icon];
+                                                        return (
+                                                            <button
+                                                                key={variant.value}
+                                                                onClick={() => handleAddIconField(variant.value as IconVariant)}
+                                                                className="flex flex-col items-center justify-center p-2 rounded-md border hover:bg-accent hover:border-primary transition-colors gap-1"
+                                                                title={variant.label}
+                                                            >
+                                                                <IconComp 
+                                                                    className="w-5 h-5" 
+                                                                    style={{ color: selectedIconColor }}
+                                                                />
+                                                                <span className="text-[9px] text-muted-foreground truncate w-full text-center">
+                                                                    {variant.label.split(' ')[0]}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <button
+                                    key={item.type}
+                                    onClick={() => handleToolSelect(item.type)}
+                                    className={cn(
+                                        "flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-accent hover:text-accent-foreground transition-all gap-2",
+                                        activeTool?.type === item.type && "ring-2 ring-blue-500 bg-blue-50 border-blue-300"
+                                    )}
+                                >
+                                    <item.icon className={cn(
+                                        "w-5 h-5",
+                                        activeTool?.type === item.type && "text-blue-600"
+                                    )} />
+                                    <span className={cn(
+                                        "text-xs font-medium",
+                                        activeTool?.type === item.type && "text-blue-600"
+                                    )}>
+                                        {activeTool?.type === item.type ? `✓ ${item.label}` : item.label}
+                                    </span>
+                                </button>
+                            )
                         ))}
                     </div>
                 </div>
@@ -182,84 +341,27 @@ export function Sidebar() {
                         <div className="space-y-3">
                             {/* Quick Size Presets for Small Fields */}
                             {(selectedField.width < 50 || selectedField.height < 50) && (
-                                <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-lg p-3 space-y-2 shadow-md">
+                                <div className="bg-linear-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-lg p-3 space-y-2 shadow-md">
                                     <div className="flex items-center gap-1">
                                         <span className="text-[10px] font-bold text-yellow-700 uppercase">⚡ Tiny Field Detected ({selectedField.width}×{selectedField.height}px)</span>
                                     </div>
-                                    <p className="text-[10px] text-yellow-700 font-semibold">Quick sizes for checkboxes:</p>
+                                    <p className="text-[10px] text-yellow-700 font-semibold">Quick sizes for icons:</p>
                                     <div className="grid grid-cols-3 gap-1">
-                                        <button
-                                            onClick={() => {
-                                                const updates: any = { width: 8, height: 8 };
-                                                if (['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType)) {
-                                                    updates.fontSize = 5; // 8 * 0.65 ≈ 5px
-                                                }
-                                                updateField(selectedField.id, updates);
-                                            }}
-                                            className="text-[9px] font-bold bg-white border-2 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400 rounded px-1 py-1 transition-all"
-                                        >
-                                            8×8
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const updates: any = { width: 10, height: 10 };
-                                                if (['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType)) {
-                                                    updates.fontSize = 7; // 10 * 0.65 ≈ 6-7px
-                                                }
-                                                updateField(selectedField.id, updates);
-                                            }}
-                                            className="text-[9px] font-bold bg-white border-2 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400 rounded px-1 py-1 transition-all"
-                                        >
-                                            10×10
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const updates: any = { width: 12, height: 12 };
-                                                if (['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType)) {
-                                                    updates.fontSize = 8; // 12 * 0.65 ≈ 7-8px
-                                                }
-                                                updateField(selectedField.id, updates);
-                                            }}
-                                            className="text-[9px] font-bold bg-white border-2 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400 rounded px-1 py-1 transition-all"
-                                        >
-                                            12×12
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const updates: any = { width: 15, height: 15 };
-                                                if (['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType)) {
-                                                    updates.fontSize = 10; // 15 * 0.65 ≈ 9-10px
-                                                }
-                                                updateField(selectedField.id, updates);
-                                            }}
-                                            className="text-[9px] font-bold bg-white border-2 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400 rounded px-1 py-1 transition-all"
-                                        >
-                                            15×15
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const updates: any = { width: 18, height: 18 };
-                                                if (['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType)) {
-                                                    updates.fontSize = 12; // 18 * 0.65 ≈ 11-12px
-                                                }
-                                                updateField(selectedField.id, updates);
-                                            }}
-                                            className="text-[9px] font-bold bg-white border-2 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400 rounded px-1 py-1 transition-all"
-                                        >
-                                            18×18
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const updates: any = { width: 20, height: 20 };
-                                                if (['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType)) {
-                                                    updates.fontSize = 13; // 20 * 0.65 ≈ 13px
-                                                }
-                                                updateField(selectedField.id, updates);
-                                            }}
-                                            className="text-[9px] font-bold bg-white border-2 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400 rounded px-1 py-1 transition-all"
-                                        >
-                                            20×20
-                                        </button>
+                                        {[8, 10, 12, 15, 18, 20].map((size) => (
+                                            <button
+                                                key={size}
+                                                onClick={() => {
+                                                    const updates: Partial<typeof selectedField> = { width: size, height: size };
+                                                    if (['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType)) {
+                                                        updates.fontSize = Math.max(FONT_CONFIG.MIN_FONT_SIZE, Math.floor(size * 0.65));
+                                                    }
+                                                    updateField(selectedField.id, updates);
+                                                }}
+                                                className="text-[9px] font-bold bg-white border-2 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400 rounded px-1 py-1 transition-all"
+                                            >
+                                                {size}×{size}
+                                            </button>
+                                        ))}
                                     </div>
                                     <div className="bg-green-100 border border-green-300 rounded p-2 space-y-1">
                                         <p className="text-[9px] text-green-700 font-bold">🎯 Auto-Zoom Feature:</p>
@@ -308,7 +410,7 @@ export function Sidebar() {
                                         value={Math.round(selectedField.width)}
                                         onChange={(e) => {
                                             const newWidth = Number(e.target.value);
-                                            const updates: any = { width: newWidth };
+                                            const updates: Partial<typeof selectedField> = { width: newWidth };
                                             
                                             // Auto-adjust font size for text fields when making them tiny
                                             if (['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType)) {
@@ -317,8 +419,7 @@ export function Sidebar() {
                                                 
                                                 // If either dimension is tiny (< 30px), scale font proportionally
                                                 if (minDimension < 30) {
-                                                    // Calculate appropriate font size: down to 1px minimum
-                                                    const suggestedFontSize = Math.max(1, Math.floor(minDimension * 0.65));
+                                                    const suggestedFontSize = Math.max(FONT_CONFIG.MIN_FONT_SIZE, Math.floor(minDimension * 0.65));
                                                     updates.fontSize = suggestedFontSize;
                                                 }
                                             }
@@ -335,7 +436,7 @@ export function Sidebar() {
                                         value={Math.round(selectedField.height)}
                                         onChange={(e) => {
                                             const newHeight = Number(e.target.value);
-                                            const updates: any = { height: newHeight };
+                                            const updates: Partial<typeof selectedField> = { height: newHeight };
                                             
                                             // Auto-adjust font size for text fields when making them tiny
                                             if (['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType)) {
@@ -344,8 +445,7 @@ export function Sidebar() {
                                                 
                                                 // If either dimension is tiny (< 30px), scale font proportionally
                                                 if (minDimension < 30) {
-                                                    // Calculate appropriate font size: down to 1px minimum
-                                                    const suggestedFontSize = Math.max(1, Math.floor(minDimension * 0.65));
+                                                    const suggestedFontSize = Math.max(FONT_CONFIG.MIN_FONT_SIZE, Math.floor(minDimension * 0.65));
                                                     updates.fontSize = suggestedFontSize;
                                                 }
                                             }
@@ -357,14 +457,118 @@ export function Sidebar() {
                                 </div>
                             </div>
 
+                            {/* Icon Properties */}
+                            {selectedField.inputType === 'ICON' && (
+                                <>
+                                    {/* Default Visibility Toggle */}
+                                    <div className="space-y-2 bg-linear-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                {selectedField.defaultVisible !== false ? (
+                                                    <Eye className="w-4 h-4 text-green-600" />
+                                                ) : (
+                                                    <EyeOff className="w-4 h-4 text-gray-400" />
+                                                )}
+                                                <label className="text-xs font-medium">Default Visibility</label>
+                                            </div>
+                                            <button
+                                                onClick={() => updateField(selectedField.id, { 
+                                                    defaultVisible: selectedField.defaultVisible === false ? true : false 
+                                                })}
+                                                className={cn(
+                                                    "relative w-12 h-6 rounded-full transition-colors duration-200",
+                                                    selectedField.defaultVisible !== false 
+                                                        ? "bg-green-500" 
+                                                        : "bg-gray-300"
+                                                )}
+                                            >
+                                                <span className={cn(
+                                                    "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200",
+                                                    selectedField.defaultVisible !== false 
+                                                        ? "left-6" 
+                                                        : "left-0.5"
+                                                )} />
+                                            </button>
+                                        </div>
+                                        <p className="text-[10px] text-blue-700">
+                                            {selectedField.defaultVisible !== false 
+                                                ? "✅ Icon will show by default in filled PDF" 
+                                                : "⚪ Icon will be hidden by default (can be enabled via API)"}
+                                        </p>
+                                        <div className="mt-2 p-2 bg-white/70 rounded border border-blue-100">
+                                            <p className="text-[9px] text-gray-600 font-medium mb-1">💡 API Usage:</p>
+                                            <code className="text-[9px] text-gray-800 bg-gray-100 px-1 py-0.5 rounded block">
+                                                {`{ "${selectedField.slug}": ${selectedField.defaultVisible !== false ? 'false' : 'true'} }`}
+                                            </code>
+                                            <p className="text-[9px] text-gray-500 mt-1">
+                                                Pass this in the fill API to {selectedField.defaultVisible !== false ? 'hide' : 'show'} this icon
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium">Icon Type</label>
+                                        <select
+                                            value={selectedField.iconVariant || 'CHECK'}
+                                            onChange={(e) => updateField(selectedField.id, { iconVariant: e.target.value as IconVariant })}
+                                            className="w-full h-8 rounded-md border bg-transparent px-2 text-sm"
+                                        >
+                                            {ICON_VARIANTS.map((variant) => (
+                                                <option key={variant.value} value={variant.value}>
+                                                    {variant.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium">Icon Color</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="color"
+                                                value={selectedField.iconColor || '#000000'}
+                                                onChange={(e) => updateField(selectedField.id, { iconColor: e.target.value })}
+                                                className="w-12 h-8 rounded-md border cursor-pointer"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={selectedField.iconColor || '#000000'}
+                                                onChange={(e) => updateField(selectedField.id, { iconColor: e.target.value })}
+                                                className="flex-1 h-8 rounded-md border bg-transparent px-2 text-sm font-mono"
+                                                placeholder="#000000"
+                                            />
+                                        </div>
+                                        {/* Quick color buttons */}
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {ICON_COLORS.map((color) => (
+                                                <button
+                                                    key={color.value}
+                                                    onClick={() => updateField(selectedField.id, { iconColor: color.value })}
+                                                    className={cn(
+                                                        "w-5 h-5 rounded-full border transition-all",
+                                                        selectedField.iconColor === color.value && "ring-2 ring-primary ring-offset-1"
+                                                    )}
+                                                    style={{ backgroundColor: color.value }}
+                                                    title={color.label}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
                             {['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType) && (
                                 <>
                                     <div className="space-y-1">
-                                        <label className="text-xs font-medium">Font Size</label>
+                                        <label className="text-xs font-medium">Font Size (min: {FONT_CONFIG.MIN_FONT_SIZE}px)</label>
                                         <input
                                             type="number"
+                                            min={FONT_CONFIG.MIN_FONT_SIZE}
+                                            step="0.5"
                                             value={selectedField.fontSize}
-                                            onChange={(e) => updateField(selectedField.id, { fontSize: Number(e.target.value) })}
+                                            onChange={(e) => updateField(selectedField.id, { 
+                                                fontSize: Math.max(FONT_CONFIG.MIN_FONT_SIZE, Number(e.target.value)) 
+                                            })}
                                             className="w-full h-8 rounded-md border bg-transparent px-2 text-sm"
                                         />
                                     </div>

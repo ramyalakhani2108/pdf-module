@@ -55,7 +55,7 @@ const preciseTop = Math.round((finalY * pageScale) * precisionFactor) / precisio
 /* Text inputs with exact baseline control */
 .text-input {
   line-height: 1.0;
-  padding: 0px 2px 0px 2px;
+  padding: 0px 0px 0px 0px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
