@@ -5,10 +5,22 @@ model: Claude Opus 4.5 (Preview) (copilot)
 ---
 Analyze my project currently open in this code base which is nextjs typescript project for pdf modifications. 
 
-Now I want you to help me with updating UI. 
-only focus on updating ui based styling. 
+Now I want significan UI improvements. 
 
-now in traditional and mordern pdf 
-Add a sidebar that displays thumbnail previews of every PDF page. Users should be able to click a thumbnail to select and edit a page. The sidebar should support drag-and-drop for page reordering and provide clear visual navigation across multi-page documents, just like the page preview panel in all pdf editor. 
-but make sure it compatible with out UI .
-if possibel maintain glass effect. 
+Now firstly I want to make themes like 
+multiple colour theme will be there
+white, offwhite and one colour will be something 
+for now focus on white theme 
+white, off white shades use 
+white, offwhite and one is yellow.
+
+each theme will contain. 
+3 colour shades. 
+white, offwhite and one colour (in feature i will add for now make it yellow)
+
+i want only these 3 colours to be used in whole website. the pdf editor with --color-slate-900 that should be thee's offwhite colour. 
+
+make sure firstly settle the management of whole websites styling theme. 
+
+i want to make it loook very modern and minimalistic.
+features should be there but not like very in your face.

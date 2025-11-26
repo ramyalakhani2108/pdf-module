@@ -11,15 +11,26 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
+                // Core semantic colors
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
                 ring: "hsl(var(--ring))",
                 background: "hsl(var(--background))",
                 foreground: "hsl(var(--foreground))",
+                
+                // Theme-specific colors
+                surface: {
+                    DEFAULT: "hsl(var(--surface))",
+                    secondary: "hsl(var(--surface-secondary))",
+                },
+                highlight: "hsl(var(--highlight))",
+                
+                // Primary - Yellow accent
                 primary: {
                     DEFAULT: "hsl(var(--primary))",
                     foreground: "hsl(var(--primary-foreground))",
                 },
+                // Secondary - Off-white
                 secondary: {
                     DEFAULT: "hsl(var(--secondary))",
                     foreground: "hsl(var(--secondary-foreground))",
@@ -37,9 +48,16 @@ const config: Config = {
                     foreground: "hsl(var(--accent-foreground))",
                 },
                 card: {
-                    DEFAULT: "hsl(var(--background))",
-                    foreground: "hsl(var(--foreground))",
+                    DEFAULT: "hsl(var(--card))",
+                    foreground: "hsl(var(--card-foreground))",
                 },
+                
+                // Direct theme colors for utility usage
+                "theme-white": "hsl(var(--white))",
+                "theme-offwhite": "hsl(var(--off-white))",
+                "theme-yellow": "hsl(var(--yellow))",
+                "theme-yellow-light": "hsl(var(--yellow-light))",
+                "theme-yellow-dark": "hsl(var(--yellow-dark))",
             },
             borderRadius: {
                 lg: "var(--radius)",
@@ -55,6 +73,9 @@ const config: Config = {
                 md: "var(--shadow-md)",
                 lg: "var(--shadow-lg)",
                 xl: "var(--shadow-xl)",
+                // Additional modern shadows
+                "soft": "0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)",
+                "glow-yellow": "0 0 20px -5px hsl(45, 93%, 58%)",
             },
             keyframes: {
                 "fade-in": {

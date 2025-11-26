@@ -332,9 +332,9 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
                     // Normal border mode (when not highlighted)
                     !isHighlighted && (showBorder || field.width < 15 || field.height < 15) && (
                         field.inputType === 'TEXT' || field.inputType === 'EMAIL' || field.inputType === 'NUMBER' || field.inputType === 'DATE'
-                            ? "border border-blue-400/50"
+                            ? "border border-primary/50"
                             : field.inputType === 'ICON'
-                            ? "border-2 border-dashed border-blue-500/60"
+                            ? "border-2 border-dashed border-primary/60"
                             : "border-2 border-dashed border-purple-400/60"
                     ),
                     
@@ -343,11 +343,11 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
                     
                     // Selection states - always visible regardless of showBorder
                     isSelected 
-                        ? `ring-2 ${isHighlighted ? typeColors.ring : 'ring-blue-500/60'} shadow-md ${isHighlighted ? typeColors.bg : 'bg-blue-50/10'}`
-                        : "hover:ring-1 hover:ring-blue-400/30",
+                        ? `ring-2 ${isHighlighted ? typeColors.ring : 'ring-primary/60'} shadow-md ${isHighlighted ? typeColors.bg : 'bg-primary/5'}`
+                        : "hover:ring-1 hover:ring-primary/30",
                     
                     // Optimized drag/resize states - NO transitions for smooth interaction
-                    isDragging && "opacity-70 cursor-grabbing shadow-lg ring-2 ring-blue-600/80",
+                    isDragging && "opacity-70 cursor-grabbing shadow-lg ring-2 ring-primary/80",
                     !isDragging && !isResizing && "cursor-move transition-shadow duration-150 ease-out",
                     // No transitions during resize for immediate visual feedback
                     isResizing && "ring-2 ring-green-500/70 shadow-lg"
@@ -471,8 +471,8 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
                     )}
                     {(field.inputType === 'SIGNATURE' || field.inputType === 'IMAGE') && (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-                            <Icon className="w-4 h-4 text-slate-500" />
-                            <span className="text-[8px] text-slate-500 uppercase tracking-wide font-medium">
+                            <Icon className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-[8px] text-muted-foreground uppercase tracking-wide font-medium">
                                 {field.inputType}
                             </span>
                         </div>
@@ -502,7 +502,7 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
                                     
                                     {/* Southeast (bottom-right) - Primary handle */}
                                     <div
-                                        className={`absolute ${primarySize} cursor-nwse-resize bg-blue-500 border border-white rounded-full shadow-md hover:scale-110 hover:bg-blue-600 transition-transform z-40 flex items-center justify-center`}
+                                        className={`absolute ${primarySize} cursor-nwse-resize bg-primary border border-white rounded-full shadow-md hover:scale-110 hover:bg-primary/90 transition-transform z-40 flex items-center justify-center`}
                                         onPointerDown={(e) => handleResizePointerDown(e, 'se')}
                                         onPointerMove={handleResizePointerMove}
                                         onPointerUp={handleResizePointerUp}
@@ -512,7 +512,7 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
                                     
                                     {/* Northeast (top-right) - positioned to not block delete button */}
                                     <div
-                                        className={`absolute ${secondarySize} cursor-nesw-resize bg-blue-400/90 border border-white rounded-full shadow-sm hover:scale-110 hover:bg-blue-500 transition-transform z-40`}
+                                        className={`absolute ${secondarySize} cursor-nesw-resize bg-primary/80 border border-white rounded-full shadow-sm hover:scale-110 hover:bg-primary transition-transform z-40`}
                                         onPointerDown={(e) => handleResizePointerDown(e, 'ne')}
                                         onPointerMove={handleResizePointerMove}
                                         onPointerUp={handleResizePointerUp}
@@ -520,7 +520,7 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
                                     
                                     {/* Southwest (bottom-left) */}
                                     <div
-                                        className={`absolute ${swSize} cursor-nesw-resize bg-blue-400/90 border border-white rounded-full shadow-sm hover:scale-110 hover:bg-blue-500 transition-transform z-40`}
+                                        className={`absolute ${swSize} cursor-nesw-resize bg-primary/80 border border-white rounded-full shadow-sm hover:scale-110 hover:bg-primary transition-transform z-40`}
                                         onPointerDown={(e) => handleResizePointerDown(e, 'sw')}
                                         onPointerMove={handleResizePointerMove}
                                         onPointerUp={handleResizePointerUp}
@@ -528,7 +528,7 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
                                     
                                     {/* Northwest (top-left) */}
                                     <div
-                                        className={`absolute ${nwSize} cursor-nwse-resize bg-blue-400/90 border border-white rounded-full shadow-sm hover:scale-110 hover:bg-blue-500 transition-transform z-40`}
+                                        className={`absolute ${nwSize} cursor-nwse-resize bg-primary/80 border border-white rounded-full shadow-sm hover:scale-110 hover:bg-primary transition-transform z-40`}
                                         onPointerDown={(e) => handleResizePointerDown(e, 'nw')}
                                         onPointerMove={handleResizePointerMove}
                                         onPointerUp={handleResizePointerUp}

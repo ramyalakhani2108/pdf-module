@@ -242,7 +242,7 @@ export default function Home() {
   // Show loading state while importing from URL
   if (isImporting) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+      <main className="min-h-screen flex flex-col items-center justify-center bg-surface p-4">
         <div className="flex flex-col items-center gap-6 text-center">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
@@ -256,7 +256,7 @@ export default function Home() {
               Downloading and processing your PDF from the provided URL
             </p>
             {importUrl && (
-              <div className="flex items-center justify-center gap-2 mt-4 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 mt-4 p-3 bg-muted/50 rounded-lg border border-border">
                 <LinkIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 <span className="text-sm text-muted-foreground truncate max-w-[300px]">
                   {importUrl}
@@ -272,7 +272,7 @@ export default function Home() {
   // Show error state if import failed
   if (importError) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+      <main className="min-h-screen flex flex-col items-center justify-center bg-surface p-4">
         <div className="flex flex-col items-center gap-6 text-center max-w-md">
           <div className="p-4 bg-destructive/10 rounded-full">
             <AlertCircle className="w-12 h-12 text-destructive" />
@@ -281,7 +281,7 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-foreground">Import Failed</h2>
             <p className="text-muted-foreground">{importError}</p>
             {importUrl && (
-              <div className="flex items-center justify-center gap-2 mt-4 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 mt-4 p-3 bg-muted/50 rounded-lg border border-border">
                 <LinkIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 <span className="text-sm text-muted-foreground truncate">
                   {importUrl}
@@ -316,16 +316,17 @@ export default function Home() {
 
   if (!currentPdf) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]" />
-        <div className="absolute h-full w-full bg-background [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
+      <main className="min-h-screen flex flex-col items-center justify-center bg-surface p-4 relative overflow-hidden">
+        {/* Subtle decorative pattern */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,hsl(var(--border))_1px,transparent_0)] bg-[size:32px_32px] opacity-30" />
+        <div className="absolute h-full w-full bg-gradient-to-b from-surface via-surface to-background" />
 
         <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-4xl">
           <div className="text-center space-y-4">
             <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-primary/10 text-primary mb-4">
               <FileText className="w-8 h-8" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/70">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground">
               PDF Field Editor
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -338,8 +339,8 @@ export default function Home() {
           {/* URL Import hint */}
           <div className="text-center text-sm text-muted-foreground mt-4">
             <p>
-              💡 <strong>Tip:</strong> You can also import a PDF via URL by adding{' '}
-              <code className="px-1.5 py-0.5 bg-muted rounded text-xs">?fileUrl=YOUR_PDF_URL</code>{' '}
+              💡 <strong className="text-foreground">Tip:</strong> You can also import a PDF via URL by adding{' '}
+              <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono border border-border">?fileUrl=YOUR_PDF_URL</code>{' '}
               to the page URL
             </p>
           </div>
@@ -350,8 +351,8 @@ export default function Home() {
 
   return (
     <main className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Header */}
-      <header className="h-14 border-b flex items-center justify-between px-4 bg-background/80 backdrop-blur-sm z-50">
+      {/* Header - Clean minimalistic design */}
+      <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-background/95 backdrop-blur-sm z-50">
         <div className="flex items-center gap-4">
           {/* Hide Back button if PDF was imported via URL to prevent navigation issues */}
           {!importUrl && (
@@ -363,7 +364,7 @@ export default function Home() {
                   reset();
                   window.history.replaceState({}, '', '/');
                 }}
-                className="gap-2"
+                className="gap-2 text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
@@ -372,13 +373,15 @@ export default function Home() {
             </>
           )}
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-primary" />
-            <span className="font-medium text-sm truncate max-w-[200px]">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <FileText className="w-4 h-4 text-primary" />
+            </div>
+            <span className="font-medium text-sm truncate max-w-[200px] text-foreground">
               {currentPdf.fileName}
             </span>
             {/* Show imported badge when loaded from URL */}
             {importUrl && (
-              <span className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+              <span className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                 Imported
               </span>
             )}
@@ -386,7 +389,7 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" asChild className="border-border hover:bg-muted">
             <a href={`/fill/${currentPdf.id}`} target="_blank" rel="noopener noreferrer">
               Preview Form
             </a>

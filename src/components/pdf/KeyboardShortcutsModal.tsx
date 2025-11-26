@@ -95,16 +95,16 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             />
             
             {/* Modal */}
-            <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden animate-scale-in mx-4">
+            <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden animate-scale-in mx-4 border border-border">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-linear-to-r from-blue-600 to-indigo-600">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-primary">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-white/20 rounded-lg">
                             <Keyboard className="w-6 h-6 text-white" />
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-white">Keyboard Shortcuts</h2>
-                            <p className="text-sm text-blue-100">Speed up your workflow with these shortcuts</p>
+                            <p className="text-sm text-white/80">Speed up your workflow with these shortcuts</p>
                         </div>
                     </div>
                     <button
@@ -117,7 +117,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                 </div>
 
                 {/* Content */}
-                <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-6">
+                <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-6 bg-surface">
                     <div className="grid gap-6">
                         {categories.map((category) => {
                             const categoryShortcuts = shortcuts.filter(s => s.category === category);
@@ -127,7 +127,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                             
                             return (
                                 <div key={category} className="space-y-3">
-                                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
                                         <CategoryIcon className="w-4 h-4" />
                                         <h3 className="text-sm font-semibold uppercase tracking-wider">
                                             {categoryLabels[category]}
@@ -137,24 +137,24 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                                         {categoryShortcuts.map((shortcut, idx) => (
                                             <div 
                                                 key={idx}
-                                                className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                                             >
                                                 <div className="flex items-center gap-3">
                                                     {shortcut.icon && (
-                                                        <shortcut.icon className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                                                        <shortcut.icon className="w-4 h-4 text-muted-foreground" />
                                                     )}
-                                                    <span className="text-sm text-slate-700 dark:text-slate-200">
+                                                    <span className="text-sm text-foreground">
                                                         {shortcut.description}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     {shortcut.keys.map((key, keyIdx) => (
                                                         <span key={keyIdx} className="flex items-center gap-1">
-                                                            {keyIdx > 0 && <span className="text-slate-400 text-xs mx-0.5">+</span>}
+                                                            {keyIdx > 0 && <span className="text-muted-foreground text-xs mx-0.5">+</span>}
                                                             <kbd className={cn(
                                                                 "px-2 py-1 text-xs font-medium rounded",
-                                                                "bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600",
-                                                                "text-slate-700 dark:text-slate-200 shadow-sm",
+                                                                "bg-card border border-border",
+                                                                "text-foreground shadow-sm",
                                                                 "min-w-6 text-center"
                                                             )}>
                                                                 {key}
@@ -171,17 +171,17 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                     </div>
 
                     {/* Footer tip */}
-                    <div className="mt-6 p-4 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <div className="mt-6 p-4 bg-primary/5 rounded-xl border border-primary/20">
                         <div className="flex items-start gap-3">
-                            <div className="p-1.5 bg-blue-500 rounded-lg">
+                            <div className="p-1.5 bg-primary rounded-lg">
                                 <Command className="w-4 h-4 text-white" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                <p className="text-sm font-medium text-foreground">
                                     Pro Tip
                                 </p>
-                                <p className="text-sm text-blue-700 dark:text-blue-300">
-                                    Use <kbd className="px-1.5 py-0.5 bg-white dark:bg-slate-700 rounded border text-xs mx-1">Shift</kbd> + Arrow keys for 10px movement, or <kbd className="px-1.5 py-0.5 bg-white dark:bg-slate-700 rounded border text-xs mx-1">⌘/Ctrl</kbd> + Arrow keys for 50px movement.
+                                <p className="text-sm text-muted-foreground">
+                                    Use <kbd className="px-1.5 py-0.5 bg-card rounded border border-border text-xs mx-1">Shift</kbd> + Arrow keys for 10px movement, or <kbd className="px-1.5 py-0.5 bg-card rounded border border-border text-xs mx-1">⌘/Ctrl</kbd> + Arrow keys for 50px movement.
                                 </p>
                             </div>
                         </div>

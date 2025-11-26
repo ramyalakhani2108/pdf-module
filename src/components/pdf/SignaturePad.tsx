@@ -283,35 +283,35 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
             />
             
             {/* Modal */}
-            <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-[700px] mx-4 overflow-hidden animate-scale-in">
+            <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-[700px] mx-4 overflow-hidden animate-scale-in border border-border">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                     <div>
-                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+                        <h2 className="text-xl font-bold text-foreground">
                             ✍️ Draw Your Signature
                         </h2>
                         {fieldLabel && (
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                            <p className="text-sm text-muted-foreground mt-0.5">
                                 For: {fieldLabel}
                             </p>
                         )}
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                        className="p-2 hover:bg-muted rounded-full transition-colors"
                     >
-                        <X className="w-5 h-5 text-slate-500" />
+                        <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                 </div>
 
                 {/* Toolbar */}
-                <div className="px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                <div className="px-6 py-3 bg-muted/50 border-b border-border">
                     <div className="flex items-center justify-between flex-wrap gap-3">
                         {/* Left: Pen options */}
                         <div className="flex items-center gap-4">
                             {/* Pen Color */}
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Pen:</span>
+                                <span className="text-xs font-medium text-muted-foreground">Pen:</span>
                                 <div className="flex items-center gap-1">
                                     {PEN_COLORS.map((color) => (
                                         <button
@@ -320,8 +320,8 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
                                             className={cn(
                                                 "w-6 h-6 rounded-full border-2 transition-all",
                                                 penColor === color.value 
-                                                    ? "border-blue-500 scale-110 shadow-md" 
-                                                    : "border-slate-300 hover:border-slate-400"
+                                                    ? "border-primary scale-110 shadow-md" 
+                                                    : "border-border hover:border-muted-foreground"
                                             )}
                                             style={{ backgroundColor: color.value }}
                                             title={color.label}
@@ -332,7 +332,7 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
 
                             {/* Pen Size */}
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Size:</span>
+                                <span className="text-xs font-medium text-muted-foreground">Size:</span>
                                 <div className="flex items-center gap-1">
                                     {PEN_SIZES.map((size) => (
                                         <button
@@ -341,8 +341,8 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
                                             className={cn(
                                                 "px-2 py-1 rounded text-xs font-medium transition-all",
                                                 penSize === size.value
-                                                    ? "bg-blue-500 text-white"
-                                                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300"
+                                                    ? "bg-primary text-white"
+                                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
                                             )}
                                         >
                                             {size.label}
@@ -361,8 +361,8 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
                                     className={cn(
                                         "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                                         showColorPicker
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300"
+                                            ? "bg-primary text-white"
+                                            : "bg-muted text-muted-foreground hover:bg-muted/80"
                                     )}
                                 >
                                     <Palette className="w-4 h-4" />
@@ -371,8 +371,8 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
                                 
                                 {/* Color Picker Dropdown */}
                                 {showColorPicker && (
-                                    <div className="absolute top-full right-0 mt-2 p-3 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-10 min-w-[200px]">
-                                        <p className="text-xs font-medium text-slate-500 mb-2">Choose Background:</p>
+                                    <div className="absolute top-full right-0 mt-2 p-3 bg-card rounded-xl shadow-xl border border-border z-10 min-w-[200px]">
+                                        <p className="text-xs font-medium text-muted-foreground mb-2">Choose Background:</p>
                                         <div className="grid grid-cols-4 gap-2">
                                             {BACKGROUND_COLORS.map((color) => (
                                                 <button
@@ -385,21 +385,21 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
                                                         "w-10 h-10 rounded-lg border-2 transition-all",
                                                         color.preview,
                                                         backgroundColor === color.value
-                                                            ? "border-blue-500 ring-2 ring-blue-200"
-                                                            : "border-slate-300 hover:border-slate-400"
+                                                            ? "border-primary ring-2 ring-primary/20"
+                                                            : "border-border hover:border-muted-foreground"
                                                     )}
                                                     title={color.label}
                                                 />
                                             ))}
                                         </div>
-                                        <p className="text-[10px] text-slate-400 mt-2 text-center">
+                                        <p className="text-[10px] text-muted-foreground mt-2 text-center">
                                             {backgroundColor === 'transparent' ? '✓ Transparent (PNG)' : '✓ Solid Background'}
                                         </p>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+                            <div className="w-px h-6 bg-border" />
 
                             {/* Undo */}
                             <button
@@ -408,8 +408,8 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
                                 className={cn(
                                     "p-2 rounded-lg transition-all",
                                     historyIndex > 0
-                                        ? "bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-600 dark:text-slate-300"
-                                        : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                                        ? "bg-muted hover:bg-muted/80 text-muted-foreground"
+                                        : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
                                 )}
                                 title="Undo"
                             >
@@ -429,10 +429,10 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
                 </div>
 
                 {/* Canvas Area */}
-                <div className="p-6">
+                <div className="p-6 bg-surface">
                     <div 
                         className={cn(
-                            "relative rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 overflow-hidden",
+                            "relative rounded-xl border-2 border-dashed border-border overflow-hidden",
                             backgroundColor === 'transparent' && "bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Crect%20width%3D%228%22%20height%3D%228%22%20fill%3D%22%23e5e5e5%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%228%22%20height%3D%228%22%20fill%3D%22%23e5e5e5%22%2F%3E%3Crect%20x%3D%228%22%20width%3D%228%22%20height%3D%228%22%20fill%3D%22%23fff%22%2F%3E%3Crect%20y%3D%228%22%20width%3D%228%22%20height%3D%228%22%20fill%3D%22%23fff%22%2F%3E%3C%2Fsvg%3E')]"
                         )}
                         style={{
@@ -454,20 +454,20 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
                         {/* Placeholder text when empty */}
                         {historyIndex <= 0 && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <p className="text-slate-400 dark:text-slate-500 text-lg font-medium">
+                                <p className="text-muted-foreground text-lg font-medium">
                                     Draw your signature here...
                                 </p>
                             </div>
                         )}
                     </div>
                     
-                    <p className="text-xs text-slate-500 text-center mt-3">
+                    <p className="text-xs text-muted-foreground text-center mt-3">
                         Use your mouse or finger to draw. Your signature will be saved as a {backgroundColor === 'transparent' ? 'transparent PNG' : 'PNG image'}.
                     </p>
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/50">
                     <Button
                         variant="outline"
                         onClick={onClose}
@@ -476,7 +476,7 @@ export function SignaturePad({ isOpen, onClose, onSave, fieldLabel }: SignatureP
                     </Button>
                     <Button
                         onClick={handleSave}
-                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                        className="bg-primary hover:bg-primary/90 text-white gap-2"
                     >
                         <Check className="w-4 h-4" />
                         Save Signature

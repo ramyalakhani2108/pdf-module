@@ -8,10 +8,10 @@ import 'swagger-ui-react/swagger-ui.css';
 const SwaggerUI = dynamic(() => import('swagger-ui-react'), { 
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex items-center justify-center min-h-screen bg-background">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading API Documentation...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Loading API Documentation...</p>
       </div>
     </div>
   ),
@@ -41,14 +41,14 @@ export default function ApiDocsPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Error Loading API Docs</h1>
-          <p className="text-gray-600">{error}</p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Error Loading API Docs</h1>
+          <p className="text-muted-foreground">{error}</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
           >
             Retry
           </button>
@@ -59,10 +59,10 @@ export default function ApiDocsPage() {
 
   if (!spec) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading API Documentation...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading API Documentation...</p>
         </div>
       </div>
     );

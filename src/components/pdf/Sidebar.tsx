@@ -153,15 +153,15 @@ export function Sidebar() {
     if (!currentPdf) return null;
 
     return (
-        <div className="w-80 border-l bg-background flex flex-col h-full">
-            <div className="p-4 border-b flex flex-col gap-3">
+        <div className="w-80 border-l border-border bg-surface flex flex-col h-full">
+            <div className="p-4 border-b border-border flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-lg">PDF Editor Tools</h2>
+                    <h2 className="font-semibold text-lg text-foreground">PDF Editor Tools</h2>
                     <Button
                         size="sm"
                         onClick={handleSave}
                         disabled={saving}
-                        className="gap-2 bg-blue-600 hover:bg-blue-700"
+                        className="gap-2"
                     >
                         <Save className="w-4 h-4" />
                         {saving ? 'Saving...' : 'Save'}
@@ -175,7 +175,7 @@ export function Sidebar() {
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 {/* Active Tool Indicator - Clean and minimal */}
                 {activeTool && (
-                    <div className="bg-blue-600 text-white rounded-lg p-3 shadow-md">
+                    <div className="bg-primary text-primary-foreground rounded-lg p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Crosshair className="w-4 h-4" />
@@ -187,13 +187,13 @@ export function Sidebar() {
                             </div>
                             <button
                                 onClick={clearActiveTool}
-                                className="p-1 hover:bg-white/20 rounded transition-colors"
+                                className="p-1 hover:bg-foreground/10 rounded transition-colors"
                                 title="Cancel (ESC)"
                             >
                                 <XIcon className="w-4 h-4" />
                             </button>
                         </div>
-                        <p className="text-xs text-blue-100 mt-1">
+                        <p className="text-xs opacity-80 mt-1">
                             Click on PDF to place • ESC to cancel
                         </p>
                     </div>
@@ -220,15 +220,15 @@ export function Sidebar() {
                                     <button
                                         onClick={() => setIconDropdownOpen(!iconDropdownOpen)}
                                         className={cn(
-                                            "w-full flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-accent hover:text-accent-foreground transition-all gap-2",
-                                            iconDropdownOpen && "ring-2 ring-primary bg-accent",
-                                            activeTool?.type === 'ICON' && "ring-2 ring-blue-500 bg-blue-50 border-blue-300"
+                                            "w-full flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-muted transition-all gap-2",
+                                            iconDropdownOpen && "ring-2 ring-primary bg-muted",
+                                            activeTool?.type === 'ICON' && "ring-2 ring-primary bg-primary/5 border-primary/30"
                                         )}
                                     >
                                         <div className="flex items-center gap-1">
                                             <item.icon className={cn(
                                                 "w-5 h-5",
-                                                activeTool?.type === 'ICON' && "text-blue-600"
+                                                activeTool?.type === 'ICON' && "text-primary"
                                             )} />
                                             <ChevronDown className={cn(
                                                 "w-3 h-3 transition-transform", 
@@ -237,7 +237,7 @@ export function Sidebar() {
                                         </div>
                                         <span className={cn(
                                             "text-xs font-medium",
-                                            activeTool?.type === 'ICON' && "text-blue-600"
+                                            activeTool?.type === 'ICON' && "text-primary"
                                         )}>
                                             {activeTool?.type === 'ICON' ? `✓ ${activeTool.iconVariant}` : item.label}
                                         </span>
@@ -245,7 +245,7 @@ export function Sidebar() {
                                     
                                     {/* Icons Dropdown */}
                                     {iconDropdownOpen && (
-                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl z-50 p-3 space-y-3 min-w-[280px]">
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-3 space-y-3 min-w-[280px]">
                                             {/* Color Selection */}
                                             <div className="space-y-2">
                                                 <label className="text-xs font-medium text-muted-foreground">Icon Color</label>
@@ -258,7 +258,7 @@ export function Sidebar() {
                                                                 "w-6 h-6 rounded-full border-2 transition-all",
                                                                 selectedIconColor === color.value 
                                                                     ? "ring-2 ring-primary ring-offset-2" 
-                                                                    : "border-gray-200 hover:scale-110"
+                                                                    : "border-border hover:scale-110"
                                                             )}
                                                             style={{ backgroundColor: color.value }}
                                                             title={color.label}
@@ -277,7 +277,7 @@ export function Sidebar() {
                                                             <button
                                                                 key={variant.value}
                                                                 onClick={() => handleAddIconField(variant.value as IconVariant)}
-                                                                className="flex flex-col items-center justify-center p-2 rounded-md border hover:bg-accent hover:border-primary transition-colors gap-1"
+                                                                className="flex flex-col items-center justify-center p-2 rounded-md border border-border hover:bg-muted hover:border-primary transition-colors gap-1"
                                                                 title={variant.label}
                                                             >
                                                                 <IconComp 
@@ -300,17 +300,17 @@ export function Sidebar() {
                                     key={item.type}
                                     onClick={() => handleToolSelect(item.type)}
                                     className={cn(
-                                        "flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-accent hover:text-accent-foreground transition-all gap-2",
-                                        activeTool?.type === item.type && "ring-2 ring-blue-500 bg-blue-50 border-blue-300"
+                                        "flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-muted transition-all gap-2",
+                                        activeTool?.type === item.type && "ring-2 ring-primary bg-primary/5 border-primary/30"
                                     )}
                                 >
                                     <item.icon className={cn(
                                         "w-5 h-5",
-                                        activeTool?.type === item.type && "text-blue-600"
+                                        activeTool?.type === item.type && "text-primary"
                                     )} />
                                     <span className={cn(
                                         "text-xs font-medium",
-                                        activeTool?.type === item.type && "text-blue-600"
+                                        activeTool?.type === item.type && "text-primary"
                                     )}>
                                         {activeTool?.type === item.type ? `✓ ${item.label}` : item.label}
                                     </span>
@@ -341,11 +341,11 @@ export function Sidebar() {
                         <div className="space-y-3">
                             {/* Quick Size Presets for Small Fields */}
                             {(selectedField.width < 50 || selectedField.height < 50) && (
-                                <div className="bg-linear-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-lg p-3 space-y-2 shadow-md">
+                                <div className="bg-primary/5 border-2 border-primary/20 rounded-lg p-3 space-y-2 shadow-sm">
                                     <div className="flex items-center gap-1">
-                                        <span className="text-[10px] font-bold text-yellow-700 uppercase">⚡ Tiny Field Detected ({selectedField.width}×{selectedField.height}px)</span>
+                                        <span className="text-[10px] font-bold text-primary uppercase">⚡ Tiny Field Detected ({selectedField.width}×{selectedField.height}px)</span>
                                     </div>
-                                    <p className="text-[10px] text-yellow-700 font-semibold">Quick sizes for icons:</p>
+                                    <p className="text-[10px] text-primary/80 font-semibold">Quick sizes for icons:</p>
                                     <div className="grid grid-cols-3 gap-1">
                                         {[8, 10, 12, 15, 18, 20].map((size) => (
                                             <button
@@ -357,23 +357,23 @@ export function Sidebar() {
                                                     }
                                                     updateField(selectedField.id, updates);
                                                 }}
-                                                className="text-[9px] font-bold bg-white border-2 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400 rounded px-1 py-1 transition-all"
+                                                className="text-[9px] font-bold bg-white border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/40 rounded px-1 py-1 transition-all"
                                             >
                                                 {size}×{size}
                                             </button>
                                         ))}
                                     </div>
-                                    <div className="bg-green-100 border border-green-300 rounded p-2 space-y-1">
+                                    <div className="bg-green-50 border border-green-200 rounded p-2 space-y-1">
                                         <p className="text-[9px] text-green-700 font-bold">🎯 Auto-Zoom Feature:</p>
-                                        <p className="text-[9px] text-green-700">When you drag this field, it will automatically zoom to <span className="font-bold">300%</span> and center in your viewport for pixel-perfect placement!</p>
+                                        <p className="text-[9px] text-green-600">When you drag this field, it will automatically zoom to <span className="font-bold">300%</span> and center in your viewport for pixel-perfect placement!</p>
                                     </div>
                                     {['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType) && (
-                                        <div className="bg-blue-50 border border-blue-300 rounded p-2">
-                                            <p className="text-[9px] text-blue-700 font-bold">✨ Auto Font Scaling:</p>
-                                            <p className="text-[9px] text-blue-700">Width/height changes automatically adjust font size to fit. Current: <span className="font-bold">{selectedField.fontSize}px</span></p>
+                                        <div className="bg-primary/5 border border-primary/20 rounded p-2">
+                                            <p className="text-[9px] text-primary font-bold">✨ Auto Font Scaling:</p>
+                                            <p className="text-[9px] text-primary/80">Width/height changes automatically adjust font size to fit. Current: <span className="font-bold">{selectedField.fontSize}px</span></p>
                                         </div>
                                     )}
-                                    <p className="text-[9px] text-yellow-600 italic">💡 Tip: Enable Precision Mode (green magnifier in toolbar) for even more control</p>
+                                    <p className="text-[9px] text-muted-foreground italic">💡 Tip: Enable Precision Mode (green magnifier in toolbar) for even more control</p>
                                 </div>
                             )}
                             
@@ -461,13 +461,13 @@ export function Sidebar() {
                             {selectedField.inputType === 'ICON' && (
                                 <>
                                     {/* Default Visibility Toggle */}
-                                    <div className="space-y-2 bg-linear-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3">
+                                    <div className="space-y-2 bg-primary/5 border border-primary/20 rounded-lg p-3">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 {selectedField.defaultVisible !== false ? (
                                                     <Eye className="w-4 h-4 text-green-600" />
                                                 ) : (
-                                                    <EyeOff className="w-4 h-4 text-gray-400" />
+                                                    <EyeOff className="w-4 h-4 text-muted-foreground" />
                                                 )}
                                                 <label className="text-xs font-medium">Default Visibility</label>
                                             </div>
@@ -479,7 +479,7 @@ export function Sidebar() {
                                                     "relative w-12 h-6 rounded-full transition-colors duration-200",
                                                     selectedField.defaultVisible !== false 
                                                         ? "bg-green-500" 
-                                                        : "bg-gray-300"
+                                                        : "bg-muted"
                                                 )}
                                             >
                                                 <span className={cn(
@@ -490,17 +490,17 @@ export function Sidebar() {
                                                 )} />
                                             </button>
                                         </div>
-                                        <p className="text-[10px] text-blue-700">
+                                        <p className="text-[10px] text-primary/80">
                                             {selectedField.defaultVisible !== false 
                                                 ? "✅ Icon will show by default in filled PDF" 
                                                 : "⚪ Icon will be hidden by default (can be enabled via API)"}
                                         </p>
-                                        <div className="mt-2 p-2 bg-white/70 rounded border border-blue-100">
-                                            <p className="text-[9px] text-gray-600 font-medium mb-1">💡 API Usage:</p>
-                                            <code className="text-[9px] text-gray-800 bg-gray-100 px-1 py-0.5 rounded block">
+                                        <div className="mt-2 p-2 bg-card rounded border border-border">
+                                            <p className="text-[9px] text-muted-foreground font-medium mb-1">💡 API Usage:</p>
+                                            <code className="text-[9px] text-foreground bg-muted px-1 py-0.5 rounded block font-mono">
                                                 {`{ "${selectedField.slug}": ${selectedField.defaultVisible !== false ? 'false' : 'true'} }`}
                                             </code>
-                                            <p className="text-[9px] text-gray-500 mt-1">
+                                            <p className="text-[9px] text-muted-foreground mt-1">
                                                 Pass this in the fill API to {selectedField.defaultVisible !== false ? 'hide' : 'show'} this icon
                                             </p>
                                         </div>

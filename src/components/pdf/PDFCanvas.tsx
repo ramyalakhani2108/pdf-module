@@ -443,22 +443,22 @@ export function PDFCanvas() {
     const pageFields = fields.filter(f => f.pageNumber === currentPage);
 
     return (
-        <div className="flex flex-col h-full w-full bg-slate-900 p-4 gap-4 overflow-hidden">
+        <div className="flex flex-col h-full w-full bg-surface-secondary p-4 gap-4 overflow-hidden">
             {/* Active Tool Banner - Clean and minimal */}
             {activeTool && (
-                <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md flex items-center justify-between">
+                <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-md flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Crosshair className="w-4 h-4" />
                         <span className="text-sm font-medium">
                             Click to place: {activeTool.type === 'ICON' ? `${activeTool.iconVariant} Icon` : `${activeTool.type} Field`}
                         </span>
-                        <span className="text-xs text-blue-200 ml-2">
+                        <span className="text-xs opacity-70 ml-2">
                             (ESC to cancel)
                         </span>
                     </div>
                     <button
                         onClick={clearActiveTool}
-                        className="p-1 hover:bg-white/20 rounded transition-colors"
+                        className="p-1 hover:bg-foreground/10 rounded transition-colors"
                         title="Cancel (ESC)"
                     >
                         <X className="w-4 h-4" />
@@ -466,19 +466,19 @@ export function PDFCanvas() {
                 </div>
             )}
 
-            {/* Enhanced Toolbar */}
-            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg shadow-lg border border-slate-700">
+            {/* Enhanced Toolbar - White theme */}
+            <div className="flex items-center justify-between bg-card p-3 rounded-lg shadow-sm border border-border">
                 <div className="flex items-center gap-2">
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                         disabled={currentPage <= 1}
-                        className="text-white hover:bg-slate-700"
+                        className="text-foreground hover:bg-muted"
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <span className="text-sm font-medium min-w-[100px] text-center text-white">
+                    <span className="text-sm font-medium min-w-[100px] text-center text-foreground">
                         Page {currentPage} of {numPages}
                     </span>
                     <Button
@@ -486,7 +486,7 @@ export function PDFCanvas() {
                         size="icon"
                         onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
                         disabled={currentPage >= numPages}
-                        className="text-white hover:bg-slate-700"
+                        className="text-foreground hover:bg-muted"
                     >
                         <ChevronRight className="w-4 h-4" />
                     </Button>
@@ -497,25 +497,25 @@ export function PDFCanvas() {
                         variant="ghost"
                         size="icon"
                         onClick={() => setZoom(s => Math.max(0.5, s - 0.1))}
-                        className="text-white hover:bg-slate-700"
+                        className="text-foreground hover:bg-muted"
                     >
                         <ZoomOut className="w-4 h-4" />
                     </Button>
-                    <span className="text-sm font-medium w-16 text-center text-white">
+                    <span className="text-sm font-medium w-16 text-center text-foreground">
                         {Math.round(zoom * 100)}%
                     </span>
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => setZoom(s => Math.min(4, s + 0.1))}
-                        className="text-white hover:bg-slate-700"
+                        className="text-foreground hover:bg-muted"
                         title="Zoom In (max 400%)"
                     >
                         <ZoomIn className="w-4 h-4" />
                     </Button>
                     
                     {/* Separator */}
-                    <div className="w-px h-6 bg-slate-600" />
+                    <div className="w-px h-6 bg-border" />
                     
                     {/* Auto Zoom Toggle */}
                     <Button
@@ -525,8 +525,8 @@ export function PDFCanvas() {
                         className={cn(
                             "text-xs gap-1",
                             autoZoomEnabled 
-                                ? "bg-emerald-600 text-white hover:bg-emerald-700" 
-                                : "text-white hover:bg-slate-700"
+                                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                                : "text-foreground hover:bg-muted"
                         )}
                         title={autoZoomEnabled ? "Auto-zoom ON: Tiny fields auto-zoom to 400%" : "Auto-zoom OFF: Manual zoom only"}
                     >
@@ -536,23 +536,23 @@ export function PDFCanvas() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button
+                    {/* <Button
                         variant={showGrid ? 'default' : 'ghost'}
                         size="icon"
                         onClick={() => setShowGrid(!showGrid)}
                         className={cn(
-                            showGrid ? "bg-blue-600 text-white" : "text-white hover:bg-slate-700"
+                            showGrid ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
                         )}
                         title="Toggle Grid (8px Professional Grid)"
                     >
                         <Grid3x3 className="w-4 h-4" />
-                    </Button>
+                    </Button> */}
                     <Button
                         variant={showRulers ? 'default' : 'ghost'}
                         size="icon"
                         onClick={() => setShowRulers(!showRulers)}
                         className={cn(
-                            showRulers ? "bg-blue-600 text-white" : "text-white hover:bg-slate-700"
+                            showRulers ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
                         )}
                         title="Toggle Rulers"
                     >
@@ -563,25 +563,25 @@ export function PDFCanvas() {
                         size="icon"
                         onClick={toggleHighlightAll}
                         className={cn(
-                            highlightFieldType === 'ALL' ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white ring-2 ring-purple-400" : 
-                            highlightFieldType ? "bg-purple-600 text-white" : 
-                            "text-white hover:bg-slate-700"
+                            highlightFieldType === 'ALL' ? "bg-primary text-primary-foreground ring-2 ring-primary/30" : 
+                            highlightFieldType ? "bg-primary/80 text-primary-foreground" : 
+                            "text-foreground hover:bg-muted"
                         )}
                         title="Highlight All Fields (⌘+Shift+H) - Shows each type in its color"
                     >
                         <Eye className="w-4 h-4" />
                     </Button>
-                    <Button
+                    {/* <Button
                         variant={precisionMode ? 'default' : 'ghost'}
                         size="icon"
                         onClick={() => setPrecisionMode(!precisionMode)}
                         className={cn(
-                            precisionMode ? "bg-green-600 text-white ring-2 ring-green-400" : "text-white hover:bg-slate-700"
+                            precisionMode ? "bg-green-600 text-white ring-2 ring-green-400" : "text-foreground hover:bg-muted"
                         )}
                         title="Precision Mode (Magnifier)"
                     >
                         <ZoomIn className="w-4 h-4" />
-                    </Button>
+                    </Button> */}
                     
                     {/* Sticky Zoom Exit Button */}
                     {stickyZoom && (
@@ -597,7 +597,7 @@ export function PDFCanvas() {
                                     setZoom(1);
                                 }
                             }}
-                            className="bg-blue-600 text-white ring-2 ring-blue-400 hover:bg-blue-700 animate-pulse"
+                            className="bg-primary text-primary-foreground ring-2 ring-primary/50 hover:bg-primary/90 animate-pulse"
                             title="Exit Sticky Zoom (400%) - Click to return to normal view"
                         >
                             <ZoomOut className="w-4 h-4" />
@@ -605,7 +605,7 @@ export function PDFCanvas() {
                     )}
 
                     {/* Separator */}
-                    <div className="w-px h-6 bg-slate-600 mx-1" />
+                    <div className="w-px h-6 bg-border mx-1" />
 
                     {/* Active Tool Cancel Button */}
                     {activeTool && (
@@ -613,7 +613,7 @@ export function PDFCanvas() {
                             variant="default"
                             size="sm"
                             onClick={clearActiveTool}
-                            className="bg-blue-600 hover:bg-blue-700 text-white gap-1 text-xs"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1 text-xs"
                         >
                             <MousePointer className="w-3 h-3" />
                             Deselect Tool
@@ -625,7 +625,7 @@ export function PDFCanvas() {
                         variant="ghost"
                         size="icon"
                         onClick={() => setShowShortcutsModal(true)}
-                        className="text-white hover:bg-slate-700"
+                        className="text-foreground hover:bg-muted"
                         title="Keyboard Shortcuts (?)"
                     >
                         <Keyboard className="w-4 h-4" />
@@ -637,22 +637,22 @@ export function PDFCanvas() {
             <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                 {/* Horizontal Ruler */}
                 {showRulers && (
-                    <div className="h-6 bg-slate-700 border-b border-slate-600 flex items-end overflow-hidden">
-                        <div className="w-6 h-6 bg-slate-800 border-r border-slate-600" /> {/* Corner */}
+                    <div className="h-6 bg-muted border-b border-border flex items-end overflow-hidden">
+                        <div className="w-6 h-6 bg-muted border-r border-border" /> {/* Corner */}
                         <div className="flex-1 relative h-full">
                             {pageDimensions && Array.from({ length: Math.ceil((pageDimensions.width * zoom) / 50) + 1 }).map((_, i) => (
                                 <div
                                     key={i}
-                                    className="absolute bottom-0 text-[9px] text-slate-400"
+                                    className="absolute bottom-0 text-[9px] text-muted-foreground"
                                     style={{ left: `${i * 50}px` }}
                                 >
-                                    <div className="w-px h-2 bg-slate-500" />
+                                    <div className="w-px h-2 bg-muted-foreground/50" />
                                     <span className="ml-1">{i * 50}</span>
                                 </div>
                             ))}
                             {cursorPosition && (
                                 <div
-                                    className="absolute bottom-0 w-px h-full bg-blue-400"
+                                    className="absolute bottom-0 w-px h-full bg-primary"
                                     style={{ left: `${cursorPosition.x}px` }}
                                 />
                             )}
@@ -663,21 +663,21 @@ export function PDFCanvas() {
                 <div className="flex-1 flex overflow-hidden min-h-0">
                     {/* Vertical Ruler */}
                     {showRulers && (
-                        <div className="w-6 bg-slate-700 border-r border-slate-600 overflow-hidden">
+                        <div className="w-6 bg-muted border-r border-border overflow-hidden">
                             <div className="relative h-full">
                                 {pageDimensions && Array.from({ length: Math.ceil((pageDimensions.height * zoom) / 50) + 1 }).map((_, i) => (
                                     <div
                                         key={i}
-                                        className="absolute left-0 text-[9px] text-slate-400 flex items-center"
+                                        className="absolute left-0 text-[9px] text-muted-foreground flex items-center"
                                         style={{ top: `${i * 50}px` }}
                                     >
-                                        <div className="h-px w-2 bg-slate-500" />
+                                        <div className="h-px w-2 bg-muted-foreground/50" />
                                         <span className="ml-0.5 -rotate-90 origin-left whitespace-nowrap">{i * 50}</span>
                                     </div>
                                 ))}
                                 {cursorPosition && (
                                     <div
-                                        className="absolute left-0 h-px w-full bg-blue-400"
+                                        className="absolute left-0 h-px w-full bg-primary"
                                         style={{ top: `${cursorPosition.y}px` }}
                                     />
                                 )}
@@ -688,12 +688,12 @@ export function PDFCanvas() {
                     {/* Main Canvas - Full scroll access at any zoom level */}
                     <div
                         ref={containerRef}
-                        className="flex-1 overflow-auto bg-slate-900 min-w-0 min-h-0"
+                        className="flex-1 overflow-auto bg-surface-secondary min-w-0 min-h-0"
                         style={{ 
                             cursor: activeTool ? 'crosshair' : 'default',
                             // Enhanced scroll behavior for high zoom navigation
                             scrollbarWidth: 'thin',
-                            scrollbarColor: 'rgba(100, 116, 139, 0.5) transparent',
+                            scrollbarColor: 'hsl(var(--muted-foreground) / 0.3) transparent',
                         }}
                         onMouseMove={handleMouseMove}
                         onMouseLeave={handleMouseLeave}
@@ -726,9 +726,9 @@ export function PDFCanvas() {
                                 }}
                                 onClick={handleCanvasClick}
                                 className={cn(
-                                    "relative shadow-2xl bg-white",
-                                    isOver && "ring-4 ring-blue-500 ring-offset-4 ring-offset-slate-900",
-                                    activeTool && "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900"
+                                    "relative shadow-lg bg-white rounded-sm",
+                                    isOver && "ring-4 ring-primary ring-offset-4 ring-offset-surface-secondary",
+                                    activeTool && "ring-2 ring-primary/50 ring-offset-2 ring-offset-surface-secondary"
                                 )}
                                 style={{
                                     cursor: activeTool ? 'crosshair' : 'default',
@@ -739,8 +739,8 @@ export function PDFCanvas() {
                                     // Disable transition during sticky zoom for instant position-preserving zoom
                                     transition: stickyZoom ? 'none' : 'width 0.3s ease-out, height 0.3s ease-out',
                                     backgroundImage: showGrid ? `
-                                        linear-gradient(rgba(59, 130, 246, 0.08) 1px, transparent 1px),
-                                        linear-gradient(90deg, rgba(59, 130, 246, 0.08) 1px, transparent 1px)
+                                        linear-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px),
+                                        linear-gradient(90deg, hsl(var(--primary) / 0.1) 1px, transparent 1px)
                                     ` : 'none',
                                     backgroundSize: showGrid ? `${CURRENT_GRID * zoom}px ${CURRENT_GRID * zoom}px` : 'auto',
                                     backgroundPosition: showGrid ? '0 0' : 'auto',
@@ -799,10 +799,10 @@ export function PDFCanvas() {
 
                                 {/* Coordinates Display */}
                                 {cursorPosition && (
-                                    <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl border-2 border-white pointer-events-none">
+                                    <div className="absolute top-3 right-3 bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-lg shadow-md border border-primary/20 pointer-events-none">
                                         X: {Math.round(cursorPosition.x / zoom)} Y: {Math.round(cursorPosition.y / zoom)} px
                                         {precisionMode && <span className="ml-2 text-green-200">🎯 PRECISION</span>}
-                                        {stickyZoom && <span className="ml-2 text-yellow-200">⚡ 400% ZOOM</span>}
+                                        {stickyZoom && <span className="ml-2 text-primary-foreground/80">⚡ 400% ZOOM</span>}
                                     </div>
                                 )}
                                 
@@ -815,9 +815,9 @@ export function PDFCanvas() {
                                             top: Math.max(magnifierPosition.y - 220, 10),
                                         }}
                                     >
-                                        <div className="bg-white border-4 border-green-500 rounded-xl shadow-2xl p-2">
+                                        <div className="bg-white border-4 border-green-500 rounded-xl shadow-xl p-2">
                                             <div 
-                                                className="bg-gray-50 rounded-lg relative"
+                                                className="bg-muted rounded-lg relative"
                                                 style={{
                                                     width: '220px',
                                                     height: '220px',
@@ -846,8 +846,8 @@ export function PDFCanvas() {
                                                     className="absolute inset-0"
                                                     style={{
                                                         backgroundImage: `
-                                                            linear-gradient(rgba(59, 130, 246, 0.2) 1px, transparent 1px),
-                                                            linear-gradient(90deg, rgba(59, 130, 246, 0.2) 1px, transparent 1px)
+                                                            linear-gradient(hsl(var(--primary) / 0.2) 1px, transparent 1px),
+                                                            linear-gradient(90deg, hsl(var(--primary) / 0.2) 1px, transparent 1px)
                                                         `,
                                                         backgroundSize: '10px 10px',
                                                     }}
@@ -855,7 +855,7 @@ export function PDFCanvas() {
                                                 
                                                 {/* Coordinate display */}
                                                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-                                                    <div className="text-xs font-mono text-gray-700 bg-white px-2 py-1 rounded shadow">
+                                                    <div className="text-xs font-mono text-foreground bg-white px-2 py-1 rounded shadow border border-border">
                                                         {Math.round(magnifierPosition.x / zoom)}, {Math.round(magnifierPosition.y / zoom)}
                                                     </div>
                                                 </div>
@@ -873,15 +873,15 @@ export function PDFCanvas() {
             {/* Floating Exit Zoom Panel - Always visible when at high zoom */}
             {stickyZoom && zoom > 2 && (
                 <div className="fixed bottom-6 right-6 z-[100] animate-fade-in">
-                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-2xl p-4 border-2 border-white/20">
+                    <div className="bg-card rounded-2xl shadow-xl p-4 border-2 border-primary">
                         <div className="flex items-center gap-4">
-                            <div className="text-white">
+                            <div className="text-foreground">
                                 <div className="text-lg font-bold flex items-center gap-2">
-                                    <ZoomIn className="w-5 h-5" />
+                                    <ZoomIn className="w-5 h-5 text-primary" />
                                     {Math.round(zoom * 100)}% Zoom
                                 </div>
-                                <p className="text-xs text-blue-100 mt-1">
-                                    Press <kbd className="px-1.5 py-0.5 bg-white/20 rounded text-[10px] font-mono">⌘+0</kbd> or click to exit
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono border border-border">⌘+0</kbd> or click to exit
                                 </p>
                             </div>
                             <Button
@@ -896,7 +896,7 @@ export function PDFCanvas() {
                                         setZoom(1);
                                     }
                                 }}
-                                className="bg-white text-blue-600 hover:bg-blue-50 font-bold shadow-lg"
+                                className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-md"
                             >
                                 <ZoomOut className="w-5 h-5 mr-2" />
                                 Exit Zoom
@@ -909,10 +909,10 @@ export function PDFCanvas() {
             {/* Floating Highlight Legend */}
             {(highlightFieldType || activeTool) && (
                 <div className="fixed bottom-6 left-6 z-[100] animate-fade-in">
-                    <div className="bg-slate-800 text-white rounded-xl shadow-2xl p-4 border border-slate-600">
+                    <div className="bg-card text-foreground rounded-xl shadow-xl p-4 border border-border">
                         <div className="flex items-center justify-between gap-4 mb-3">
                             <div className="flex items-center gap-2">
-                                <Eye className="w-4 h-4 text-purple-400" />
+                                <Eye className="w-4 h-4 text-primary" />
                                 <span className="text-sm font-bold">
                                     {activeTool 
                                         ? `Highlighting: ${activeTool.type} fields` 
@@ -922,7 +922,7 @@ export function PDFCanvas() {
                             {!activeTool && (
                                 <button 
                                     onClick={toggleHighlightAll}
-                                    className="px-2 py-1 bg-white/10 rounded text-xs hover:bg-white/20 transition-colors"
+                                    className="px-2 py-1 bg-muted rounded text-xs hover:bg-muted/80 transition-colors"
                                 >
                                     Hide (⌘⇧H)
                                 </button>
@@ -934,7 +934,7 @@ export function PDFCanvas() {
                             <div className={cn(
                                 "flex items-center gap-1.5 px-2 py-1 rounded",
                                 (highlightFieldType === 'ALL' || highlightFieldType === 'TEXT' || activeTool?.type === 'TEXT') 
-                                    ? "bg-blue-500/30 ring-1 ring-blue-500" : "bg-slate-700/50"
+                                    ? "bg-blue-100 ring-1 ring-blue-400" : "bg-muted"
                             )}>
                                 <div className="w-2.5 h-2.5 rounded-sm bg-blue-500"></div>
                                 <span>TEXT</span>
@@ -942,7 +942,7 @@ export function PDFCanvas() {
                             <div className={cn(
                                 "flex items-center gap-1.5 px-2 py-1 rounded",
                                 (highlightFieldType === 'ALL' || highlightFieldType === 'DATE' || activeTool?.type === 'DATE') 
-                                    ? "bg-orange-500/30 ring-1 ring-orange-500" : "bg-slate-700/50"
+                                    ? "bg-orange-100 ring-1 ring-orange-400" : "bg-muted"
                             )}>
                                 <div className="w-2.5 h-2.5 rounded-sm bg-orange-500"></div>
                                 <span>DATE</span>
@@ -950,7 +950,7 @@ export function PDFCanvas() {
                             <div className={cn(
                                 "flex items-center gap-1.5 px-2 py-1 rounded",
                                 (highlightFieldType === 'ALL' || highlightFieldType === 'NUMBER' || activeTool?.type === 'NUMBER') 
-                                    ? "bg-green-500/30 ring-1 ring-green-500" : "bg-slate-700/50"
+                                    ? "bg-green-100 ring-1 ring-green-400" : "bg-muted"
                             )}>
                                 <div className="w-2.5 h-2.5 rounded-sm bg-green-500"></div>
                                 <span>NUMBER</span>
@@ -958,7 +958,7 @@ export function PDFCanvas() {
                             <div className={cn(
                                 "flex items-center gap-1.5 px-2 py-1 rounded",
                                 (highlightFieldType === 'ALL' || highlightFieldType === 'EMAIL' || activeTool?.type === 'EMAIL') 
-                                    ? "bg-cyan-500/30 ring-1 ring-cyan-500" : "bg-slate-700/50"
+                                    ? "bg-cyan-100 ring-1 ring-cyan-400" : "bg-muted"
                             )}>
                                 <div className="w-2.5 h-2.5 rounded-sm bg-cyan-500"></div>
                                 <span>EMAIL</span>
@@ -966,7 +966,7 @@ export function PDFCanvas() {
                             <div className={cn(
                                 "flex items-center gap-1.5 px-2 py-1 rounded",
                                 (highlightFieldType === 'ALL' || highlightFieldType === 'ICON' || activeTool?.type === 'ICON') 
-                                    ? "bg-purple-500/30 ring-1 ring-purple-500" : "bg-slate-700/50"
+                                    ? "bg-purple-100 ring-1 ring-purple-400" : "bg-muted"
                             )}>
                                 <div className="w-2.5 h-2.5 rounded-sm bg-purple-500"></div>
                                 <span>ICON</span>
@@ -974,7 +974,7 @@ export function PDFCanvas() {
                             <div className={cn(
                                 "flex items-center gap-1.5 px-2 py-1 rounded",
                                 (highlightFieldType === 'ALL' || highlightFieldType === 'SIGNATURE' || activeTool?.type === 'SIGNATURE') 
-                                    ? "bg-pink-500/30 ring-1 ring-pink-500" : "bg-slate-700/50"
+                                    ? "bg-pink-100 ring-1 ring-pink-400" : "bg-muted"
                             )}>
                                 <div className="w-2.5 h-2.5 rounded-sm bg-pink-500"></div>
                                 <span>SIGNATURE</span>
@@ -982,7 +982,7 @@ export function PDFCanvas() {
                             <div className={cn(
                                 "flex items-center gap-1.5 px-2 py-1 rounded col-span-2",
                                 (highlightFieldType === 'ALL' || highlightFieldType === 'IMAGE' || activeTool?.type === 'IMAGE') 
-                                    ? "bg-amber-500/30 ring-1 ring-amber-500" : "bg-slate-700/50"
+                                    ? "bg-amber-100 ring-1 ring-amber-400" : "bg-muted"
                             )}>
                                 <div className="w-2.5 h-2.5 rounded-sm bg-amber-500"></div>
                                 <span>IMAGE</span>

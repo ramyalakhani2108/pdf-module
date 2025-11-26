@@ -798,7 +798,7 @@ export function PDFFormFiller({ pdf, fields }: PDFFormFillerProps) {
                                                                         setActiveSignatureField({ slug: field.slug, label: field.label });
                                                                         setSignaturePadOpen(true);
                                                                     }}
-                                                                    className="p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+                                                                    className="p-2 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-colors"
                                                                     title="Re-sign"
                                                                 >
                                                                     <PenTool className="w-3 h-3" />
