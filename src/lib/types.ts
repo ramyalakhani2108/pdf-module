@@ -9,7 +9,8 @@ export type InputType =
     | 'EMAIL'
     | 'ICON'
     | 'SIGNATURE'
-    | 'IMAGE';
+    | 'IMAGE'
+    | 'FILLABLE';
 
 /**
  * Icon variants available for the ICON input type
@@ -19,16 +20,29 @@ export type IconVariant =
     | 'CHECK'
     | 'CROSS'
     | 'CIRCLE'
+    | 'CIRCLE_FILLED'
     | 'CIRCLE_CHECK'
     | 'CIRCLE_CROSS'
     | 'SQUARE'
+    | 'SQUARE_FILLED'
     | 'SQUARE_CHECK'
     | 'STAR'
+    | 'STAR_FILLED'
     | 'HEART'
+    | 'HEART_FILLED'
     | 'ARROW_RIGHT'
     | 'ARROW_LEFT'
     | 'ARROW_UP'
-    | 'ARROW_DOWN';
+    | 'ARROW_DOWN'
+    | 'THUMBS_UP'
+    | 'THUMBS_DOWN'
+    | 'FLAG'
+    | 'PIN'
+    | 'BOOKMARK'
+    | 'INFO'
+    | 'WARNING'
+    | 'MINUS'
+    | 'PLUS';
 
 export interface PdfFile {
     id: string;
@@ -68,6 +82,24 @@ export interface PdfInput {
     iconColor?: string | null;
     /** Default visibility for ICON input type - controls if icon shows by default in filled PDF */
     defaultVisible?: boolean | null;
+    /** Field visibility in editor - controls if field is hidden/shown in the canvas */
+    isVisible?: boolean;
+    /** Z-index for stacking order (higher = on top) */
+    zIndex?: number;
+    /** Border radius in pixels (0 = square corners) */
+    borderRadius?: number;
+    /** Whether border is enabled */
+    borderEnabled?: boolean;
+    /** Border width in pixels */
+    borderWidth?: number;
+    /** Border style: solid, dashed, dotted */
+    borderStyle?: 'solid' | 'dashed' | 'dotted';
+    /** Border color (hex) */
+    borderColor?: string;
+    /** Image fit mode: 'contain' | 'cover' | 'fill' | 'none' */
+    imageFit?: 'contain' | 'cover' | 'fill' | 'none';
+    /** Placeholder text for FILLABLE input type */
+    placeholder?: string;
     createdAt: Date;
     updatedAt: Date;
 }

@@ -170,8 +170,11 @@ export async function POST(request: NextRequest) {
           : (input as any).defaultVisible !== false; // Default to visible unless explicitly set to false
         
         if (!isVisible) continue; // Skip drawing this icon if visibility is false
+      } else if (inputType === 'FILLABLE') {
+        // FILLABLE fields are always rendered as native PDF form fields
+        // They don't need a value - they're meant to be filled by the end user
       } else {
-        // For non-icon fields, skip if no value provided
+        // For other non-icon fields, skip if no value provided
         if (value === undefined || value === null) continue;
       }
 
@@ -275,6 +278,30 @@ export async function POST(request: NextRequest) {
           if (typeof value === 'string' && value.startsWith('data:image')) {
             await drawImage(pdfDoc, page, value, { x: pdfX, y: pdfY }, input.width, input.height);
           }
+          break;
+
+        case 'FILLABLE':
+          // Create a native PDF form text field that can be filled in external viewers
+          await createFillableTextField(
+            pdfDoc,
+            page,
+            input.slug,
+            { x: pdfX, y: pdfY },
+            input.width,
+            input.height,
+            {
+              fontSize: input.fontSize,
+              fontFamily: input.fontFamily,
+              fontWeight: input.fontWeight,
+              textColor: input.textColor,
+              placeholder: (input as any).placeholder,
+              borderRadius: (input as any).borderRadius,
+              borderEnabled: (input as any).borderEnabled,
+              borderWidth: (input as any).borderWidth,
+              borderColor: (input as any).borderColor,
+            },
+            fonts
+          );
           break;
       }
     }
@@ -619,5 +646,82 @@ async function drawImage(
     }
   } catch (error) {
     console.error('Failed to embed image:', error);
+  }
+}
+
+/**
+ * Create a native PDF form text field (fillable in external viewers like Adobe Acrobat)
+ */
+async function createFillableTextField(
+  pdfDoc: PDFDocument,
+  page: ReturnType<PDFDocument['getPages']>[0],
+  fieldName: string,
+  fieldPosition: { x: number; y: number },
+  width: number,
+  height: number,
+  options: {
+    fontSize?: number;
+    fontFamily?: string | null;
+    fontWeight?: string | null;
+    textColor?: string | null;
+    placeholder?: string | null;
+    borderRadius?: number | null;
+    borderEnabled?: boolean | null;
+    borderWidth?: number | null;
+    borderColor?: string | null;
+  },
+  fonts: FontMap
+): Promise<void> {
+  try {
+    // Get or create the form
+    const form = pdfDoc.getForm();
+    
+    // Create a unique field name (add timestamp to avoid conflicts)
+    const uniqueFieldName = `${fieldName}_${Date.now()}`;
+    
+    // Create a text field
+    const textField = form.createTextField(uniqueFieldName);
+    
+    // Get the page index
+    const pages = pdfDoc.getPages();
+    const pageIndex = pages.indexOf(page);
+    
+    // Add the field widget to the page at the specified position
+    textField.addToPage(page, {
+      x: fieldPosition.x,
+      y: fieldPosition.y,
+      width: width,
+      height: height,
+      borderWidth: options.borderEnabled ? (options.borderWidth || 1) : 0,
+      borderColor: options.borderEnabled && options.borderColor 
+        ? rgb(
+            parseInt(options.borderColor.slice(1, 3), 16) / 255,
+            parseInt(options.borderColor.slice(3, 5), 16) / 255,
+            parseInt(options.borderColor.slice(5, 7), 16) / 255
+          )
+        : rgb(0.8, 0.8, 0.8),
+      backgroundColor: rgb(1, 1, 1), // White background
+    });
+    
+    // Set text appearance
+    const selectedFont = selectFont(fonts, options.fontFamily, options.fontWeight, null);
+    const textColor = options.textColor 
+      ? rgb(
+          parseInt(options.textColor.slice(1, 3), 16) / 255,
+          parseInt(options.textColor.slice(3, 5), 16) / 255,
+          parseInt(options.textColor.slice(5, 7), 16) / 255
+        )
+      : rgb(0, 0, 0);
+    
+    textField.setFontSize(options.fontSize || 12);
+    textField.updateAppearances(selectedFont);
+    
+    // Set default/placeholder text if provided
+    if (options.placeholder) {
+      textField.setText(options.placeholder);
+    }
+    
+  } catch (error) {
+    console.error('Failed to create fillable text field:', error);
   }
 }

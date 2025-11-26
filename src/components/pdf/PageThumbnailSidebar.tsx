@@ -61,6 +61,7 @@ interface ThumbnailCardProps {
     isDragging?: boolean;
     dragListeners?: Record<string, unknown>;
     children?: React.ReactNode;
+    aspectRatio?: number; // width / height ratio of the page
 }
 
 const ThumbnailCard = memo(function ThumbnailCard({
@@ -73,7 +74,40 @@ const ThumbnailCard = memo(function ThumbnailCard({
     isDragging,
     dragListeners,
     children,
+    aspectRatio,
 }: ThumbnailCardProps) {
+    // Calculate thumbnail dimensions based on aspect ratio
+    // Default to portrait A4 ratio (~0.707) if not provided
+    const baseWidth = 100;
+    const baseHeight = 140;
+    
+    let thumbnailWidth: number;
+    let thumbnailHeight: number;
+    
+    if (aspectRatio && aspectRatio > 1) {
+        // Landscape: width is larger, fit to baseHeight and calculate width
+        thumbnailWidth = baseHeight * aspectRatio * thumbnailScale;
+        thumbnailHeight = baseHeight * thumbnailScale;
+        // Cap the width to prevent very wide thumbnails
+        if (thumbnailWidth > 180 * thumbnailScale) {
+            thumbnailWidth = 180 * thumbnailScale;
+            thumbnailHeight = thumbnailWidth / aspectRatio;
+        }
+    } else if (aspectRatio) {
+        // Portrait: height is larger, fit to baseWidth and calculate height
+        thumbnailWidth = baseWidth * thumbnailScale;
+        thumbnailHeight = (baseWidth / aspectRatio) * thumbnailScale;
+        // Cap the height to prevent very tall thumbnails
+        if (thumbnailHeight > 160 * thumbnailScale) {
+            thumbnailHeight = 160 * thumbnailScale;
+            thumbnailWidth = thumbnailHeight * aspectRatio;
+        }
+    } else {
+        // Default portrait dimensions
+        thumbnailWidth = baseWidth * thumbnailScale;
+        thumbnailHeight = baseHeight * thumbnailScale;
+    }
+
     return (
         <div
             className={cn(
@@ -92,8 +126,8 @@ const ThumbnailCard = memo(function ThumbnailCard({
                         : 'ring-1 ring-border/50 hover:ring-2 hover:ring-primary/40 hover:shadow-md'
                 )}
                 style={{
-                    width: `${100 * thumbnailScale}px`,
-                    height: `${140 * thumbnailScale}px`,
+                    width: `${thumbnailWidth}px`,
+                    height: `${thumbnailHeight}px`,
                 }}
             >
                 {/* Loading State */}
@@ -155,6 +189,7 @@ interface SortableThumbnailProps {
     fieldCount: number;
     isLoading: boolean;
     children?: React.ReactNode;
+    aspectRatio?: number;
 }
 
 function SortableThumbnail({
@@ -166,6 +201,7 @@ function SortableThumbnail({
     fieldCount,
     isLoading,
     children,
+    aspectRatio,
 }: SortableThumbnailProps) {
     const {
         attributes,
@@ -193,6 +229,7 @@ function SortableThumbnail({
                 isLoading={isLoading}
                 isDragging={isDragging}
                 dragListeners={listeners}
+                aspectRatio={aspectRatio}
             >
                 {children}
             </ThumbnailCard>
@@ -223,10 +260,40 @@ function SortableThumbnail({
 function DragOverlayCard({
     pageNumber,
     thumbnailScale,
+    aspectRatio,
 }: {
     pageNumber: number;
     thumbnailScale: number;
+    aspectRatio?: number;
 }) {
+    // Calculate dimensions based on aspect ratio
+    const baseWidth = 72;
+    const baseHeight = 100;
+    
+    let overlayWidth: number;
+    let overlayHeight: number;
+    
+    if (aspectRatio && aspectRatio > 1) {
+        // Landscape
+        overlayWidth = baseHeight * aspectRatio * thumbnailScale;
+        overlayHeight = baseHeight * thumbnailScale;
+        if (overlayWidth > 140 * thumbnailScale) {
+            overlayWidth = 140 * thumbnailScale;
+            overlayHeight = overlayWidth / aspectRatio;
+        }
+    } else if (aspectRatio) {
+        // Portrait
+        overlayWidth = baseWidth * thumbnailScale;
+        overlayHeight = (baseWidth / aspectRatio) * thumbnailScale;
+        if (overlayHeight > 120 * thumbnailScale) {
+            overlayHeight = 120 * thumbnailScale;
+            overlayWidth = overlayHeight * aspectRatio;
+        }
+    } else {
+        overlayWidth = baseWidth * thumbnailScale;
+        overlayHeight = baseHeight * thumbnailScale;
+    }
+
     return (
         <div
             className={cn(
@@ -243,8 +310,8 @@ function DragOverlayCard({
                 <div
                     className="rounded-lg shadow-lg ring-2 ring-primary overflow-hidden flex items-center justify-center"
                     style={{
-                        width: `${72 * thumbnailScale}px`,
-                        height: `${100 * thumbnailScale}px`,
+                        width: `${overlayWidth}px`,
+                        height: `${overlayHeight}px`,
                     }}
                 >
                     <div className="flex flex-col items-center gap-1 text-muted-foreground">
@@ -289,6 +356,7 @@ export function PageThumbnailSidebar({ className }: PageThumbnailSidebarProps) {
     const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
     const [loadedPages, setLoadedPages] = useState<Set<number>>(new Set());
     const [pdfLoaded, setPdfLoaded] = useState(false);
+    const [pageDimensions, setPageDimensions] = useState<Record<number, { width: number; height: number }>>({}); 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Initialize page order when PDF loads
@@ -302,6 +370,7 @@ export function PageThumbnailSidebar({ className }: PageThumbnailSidebarProps) {
         // Reset state when PDF changes
         setLoadedPages(new Set());
         setPdfLoaded(false);
+        setPageDimensions({});
     }, [currentPdf?.id, totalPages]);
 
     // Sensors for drag and drop with proper activation constraint
@@ -333,9 +402,15 @@ export function PageThumbnailSidebar({ className }: PageThumbnailSidebarProps) {
         [setCurrentPage]
     );
 
-    // Handle page load
-    const handlePageLoad = useCallback((pageNumber: number) => {
+    // Handle page load with dimensions
+    const handlePageLoad = useCallback((pageNumber: number, width?: number, height?: number) => {
         setLoadedPages((prev) => new Set(prev).add(pageNumber));
+        if (width && height) {
+            setPageDimensions((prev) => ({
+                ...prev,
+                [pageNumber]: { width, height },
+            }));
+        }
     }, []);
 
     // Scroll active page into view
@@ -567,31 +642,65 @@ export function PageThumbnailSidebar({ className }: PageThumbnailSidebarProps) {
                                             : 'flex-wrap justify-center'
                                     )}
                                 >
-                                    {displayOrder.map((pageNum) => (
-                                        <div key={pageNum} data-page-item={pageNum}>
-                                            <SortableThumbnail
-                                                id={`page-${pageNum}`}
-                                                pageNumber={pageNum}
-                                                isActive={currentPage === pageNum}
-                                                onClick={() => handlePageClick(pageNum)}
-                                                thumbnailScale={thumbnailScale}
-                                                fieldCount={fieldCountsPerPage[pageNum] || 0}
-                                                isLoading={!loadedPages.has(pageNum)}
-                                            >
-                                                {pdfLoaded && (
-                                                    <Page
-                                                        pageNumber={pageNum}
-                                                        width={100 * thumbnailScale}
-                                                        renderTextLayer={false}
-                                                        renderAnnotationLayer={false}
-                                                        onRenderSuccess={() => handlePageLoad(pageNum)}
-                                                        loading={null}
-                                                        className="thumbnail-page"
-                                                    />
-                                                )}
-                                            </SortableThumbnail>
-                                        </div>
-                                    ))}
+                                    {displayOrder.map((pageNum) => {
+                                        const dims = pageDimensions[pageNum];
+                                        const aspectRatio = dims ? dims.width / dims.height : undefined;
+                                        
+                                        // Calculate the width needed for the Page component to fill the thumbnail
+                                        // This should match the calculation in ThumbnailCard
+                                        const baseWidth = 100;
+                                        const baseHeight = 140;
+                                        let pageRenderWidth: number;
+                                        
+                                        if (aspectRatio && aspectRatio > 1) {
+                                            // Landscape
+                                            let thumbnailWidth = baseHeight * aspectRatio * thumbnailScale;
+                                            if (thumbnailWidth > 180 * thumbnailScale) {
+                                                thumbnailWidth = 180 * thumbnailScale;
+                                            }
+                                            pageRenderWidth = thumbnailWidth;
+                                        } else if (aspectRatio) {
+                                            // Portrait
+                                            let thumbnailHeight = (baseWidth / aspectRatio) * thumbnailScale;
+                                            if (thumbnailHeight > 160 * thumbnailScale) {
+                                                thumbnailHeight = 160 * thumbnailScale;
+                                                pageRenderWidth = thumbnailHeight * aspectRatio;
+                                            } else {
+                                                pageRenderWidth = baseWidth * thumbnailScale;
+                                            }
+                                        } else {
+                                            pageRenderWidth = baseWidth * thumbnailScale;
+                                        }
+                                        
+                                        return (
+                                            <div key={pageNum} data-page-item={pageNum}>
+                                                <SortableThumbnail
+                                                    id={`page-${pageNum}`}
+                                                    pageNumber={pageNum}
+                                                    isActive={currentPage === pageNum}
+                                                    onClick={() => handlePageClick(pageNum)}
+                                                    thumbnailScale={thumbnailScale}
+                                                    fieldCount={fieldCountsPerPage[pageNum] || 0}
+                                                    isLoading={!loadedPages.has(pageNum)}
+                                                    aspectRatio={aspectRatio}
+                                                >
+                                                    {pdfLoaded && (
+                                                        <Page
+                                                            pageNumber={pageNum}
+                                                            width={pageRenderWidth}
+                                                            renderTextLayer={false}
+                                                            renderAnnotationLayer={false}
+                                                            onLoadSuccess={(page) => {
+                                                                handlePageLoad(pageNum, page.originalWidth, page.originalHeight);
+                                                            }}
+                                                            loading={null}
+                                                            className="thumbnail-page"
+                                                        />
+                                                    )}
+                                                </SortableThumbnail>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </SortableContext>
 
@@ -601,6 +710,7 @@ export function PageThumbnailSidebar({ className }: PageThumbnailSidebarProps) {
                                     <DragOverlayCard
                                         pageNumber={activePageNumber}
                                         thumbnailScale={thumbnailScale}
+                                        aspectRatio={pageDimensions[activePageNumber] ? pageDimensions[activePageNumber].width / pageDimensions[activePageNumber].height : undefined}
                                     />
                                 ) : null}
                             </DragOverlay>

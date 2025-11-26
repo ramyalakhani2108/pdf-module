@@ -84,6 +84,8 @@ export const FIELD_DEFAULTS = {
   SIGNATURE: { width: 300, height: 80, fontSize: 12 },
   /** Default dimensions for image fields */
   IMAGE: { width: 200, height: 150, fontSize: 12 },
+  /** Default dimensions for native PDF fillable fields */
+  FILLABLE: { width: 200, height: 30, fontSize: 12 },
 } as const;
 
 /**
@@ -245,6 +247,7 @@ export const INPUT_TYPES = [
   'ICON',
   'SIGNATURE',
   'IMAGE',
+  'FILLABLE',
 ] as const;
 
 /**
@@ -258,17 +261,30 @@ export const TEXT_INPUT_TYPES = ['TEXT', 'EMAIL', 'NUMBER', 'DATE'] as const;
 export const ICON_VARIANTS = [
   { value: 'CHECK', label: 'Check Mark', icon: 'Check' },
   { value: 'CROSS', label: 'Cross / X', icon: 'X' },
-  { value: 'CIRCLE', label: 'Circle', icon: 'Circle' },
+  { value: 'CIRCLE', label: 'Circle (Outline)', icon: 'Circle' },
+  { value: 'CIRCLE_FILLED', label: 'Circle (Filled)', icon: 'CircleDot' },
   { value: 'CIRCLE_CHECK', label: 'Circle Check', icon: 'CheckCircle' },
   { value: 'CIRCLE_CROSS', label: 'Circle Cross', icon: 'XCircle' },
-  { value: 'SQUARE', label: 'Square', icon: 'Square' },
+  { value: 'SQUARE', label: 'Square (Outline)', icon: 'Square' },
+  { value: 'SQUARE_FILLED', label: 'Square (Filled)', icon: 'SquareIcon' },
   { value: 'SQUARE_CHECK', label: 'Square Check', icon: 'CheckSquare' },
-  { value: 'STAR', label: 'Star', icon: 'Star' },
-  { value: 'HEART', label: 'Heart', icon: 'Heart' },
+  { value: 'STAR', label: 'Star (Outline)', icon: 'Star' },
+  { value: 'STAR_FILLED', label: 'Star (Filled)', icon: 'StarIcon' },
+  { value: 'HEART', label: 'Heart (Outline)', icon: 'Heart' },
+  { value: 'HEART_FILLED', label: 'Heart (Filled)', icon: 'HeartIcon' },
   { value: 'ARROW_RIGHT', label: 'Arrow Right', icon: 'ArrowRight' },
   { value: 'ARROW_LEFT', label: 'Arrow Left', icon: 'ArrowLeft' },
   { value: 'ARROW_UP', label: 'Arrow Up', icon: 'ArrowUp' },
   { value: 'ARROW_DOWN', label: 'Arrow Down', icon: 'ArrowDown' },
+  { value: 'THUMBS_UP', label: 'Thumbs Up', icon: 'ThumbsUp' },
+  { value: 'THUMBS_DOWN', label: 'Thumbs Down', icon: 'ThumbsDown' },
+  { value: 'FLAG', label: 'Flag', icon: 'Flag' },
+  { value: 'PIN', label: 'Pin / Location', icon: 'MapPin' },
+  { value: 'BOOKMARK', label: 'Bookmark', icon: 'Bookmark' },
+  { value: 'INFO', label: 'Info', icon: 'Info' },
+  { value: 'WARNING', label: 'Warning', icon: 'AlertTriangle' },
+  { value: 'MINUS', label: 'Minus', icon: 'Minus' },
+  { value: 'PLUS', label: 'Plus', icon: 'Plus' },
 ] as const;
 
 /**

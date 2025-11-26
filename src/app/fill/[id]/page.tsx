@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { PDFFormFiller } from '@/components/pdf/PDFFormFiller';
 import { FileText } from 'lucide-react';
+import { PdfInput } from '@/lib/types';
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -21,6 +22,9 @@ export default async function FillPage({ params }: PageProps) {
         notFound();
     }
 
+    // Cast inputs to match PdfInput type (Prisma returns string for enums)
+    const fields = pdf.inputs as unknown as PdfInput[];
+
     return (
         <main className="h-screen flex flex-col bg-background overflow-hidden">
             <header className="h-14 border-b flex items-center justify-between px-4 bg-background/80 backdrop-blur-sm z-50">
@@ -35,7 +39,7 @@ export default async function FillPage({ params }: PageProps) {
             </header>
 
             <div className="flex-1 overflow-hidden">
-                <PDFFormFiller pdf={pdf} fields={pdf.inputs} />
+                <PDFFormFiller pdf={pdf} fields={fields} />
             </div>
         </main>
     );

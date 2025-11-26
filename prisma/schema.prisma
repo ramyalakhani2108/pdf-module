@@ -45,6 +45,16 @@ model PdfInput {
   iconVariant    String?   @default("CHECK")
   iconColor      String?   @default("#000000")
   defaultVisible Boolean?  @default(true)
+  // Border and appearance settings
+  borderRadius   Float?    @default(0)
+  borderEnabled  Boolean?  @default(false)
+  borderWidth    Float?    @default(1)
+  borderStyle    String?   @default("solid")
+  borderColor    String?   @default("#000000")
+  // Image fit mode
+  imageFit       String?   @default("contain")
+  // Placeholder for FILLABLE fields
+  placeholder    String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -74,4 +84,5 @@ enum InputType {
   ICON
   SIGNATURE
   IMAGE
+  FILLABLE
 }

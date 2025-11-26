@@ -7,7 +7,17 @@ import { restrictToParentElement } from '@dnd-kit/modifiers';
 import { useEditorStore } from '@/lib/store';
 import { DraggableField } from './DraggableField';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
-import { Loader2, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Grid3x3, Ruler, Keyboard, MousePointer, Crosshair, X, Eye } from 'lucide-react';
+import { 
+    Loader2, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Grid3x3, Ruler, Keyboard, MousePointer, Crosshair, X, Eye,
+    Type, Calendar, Hash, Mail, PenTool, Image as ImageIcon, Shapes, ChevronDown,
+    Check, X as XIcon, Circle, CheckCircle, XCircle, Square, CheckSquare, Star, Heart,
+    ArrowRight, ArrowLeft, ArrowUp, ArrowDown,
+    // New icons
+    CircleDot, ThumbsUp, ThumbsDown, Flag, MapPin, Bookmark, Info, AlertTriangle, Minus, Plus,
+    FormInput
+} from 'lucide-react';
+import { InputType, IconVariant } from '@/lib/types';
+import { ICON_VARIANTS, ICON_COLORS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -39,6 +49,48 @@ const GRID_OPTIONS = {
 
 const CURRENT_GRID = GRID_OPTIONS.SMALL; // Default to 8px grid
 
+// Field types for the toolbar
+const fieldTypes: { type: InputType; label: string; icon: React.ElementType }[] = [
+    { type: 'TEXT', label: 'Text', icon: Type },
+    { type: 'DATE', label: 'Date', icon: Calendar },
+    { type: 'NUMBER', label: 'Number', icon: Hash },
+    { type: 'EMAIL', label: 'Email', icon: Mail },
+    { type: 'ICON', label: 'Icon', icon: Shapes },
+    { type: 'SIGNATURE', label: 'Signature', icon: PenTool },
+    { type: 'IMAGE', label: 'Image', icon: ImageIcon },
+    { type: 'FILLABLE', label: 'Fillable', icon: FormInput },
+];
+
+// Icon component map for lucide icons
+const iconComponentMap: Record<string, React.ElementType> = {
+    'Check': Check,
+    'X': XIcon,
+    'Circle': Circle,
+    'CircleDot': CircleDot,
+    'CheckCircle': CheckCircle,
+    'XCircle': XCircle,
+    'Square': Square,
+    'SquareIcon': Square, // Filled variant uses same icon with fill style
+    'CheckSquare': CheckSquare,
+    'Star': Star,
+    'StarIcon': Star, // Filled variant
+    'Heart': Heart,
+    'HeartIcon': Heart, // Filled variant
+    'ArrowRight': ArrowRight,
+    'ArrowLeft': ArrowLeft,
+    'ArrowUp': ArrowUp,
+    'ArrowDown': ArrowDown,
+    'ThumbsUp': ThumbsUp,
+    'ThumbsDown': ThumbsDown,
+    'Flag': Flag,
+    'MapPin': MapPin,
+    'Bookmark': Bookmark,
+    'Info': Info,
+    'AlertTriangle': AlertTriangle,
+    'Minus': Minus,
+    'Plus': Plus,
+};
+
 // Enhanced snap-to-grid modifier with professional grid spacing
 const snapToGridModifier = ({ transform }: any) => {
     return {
@@ -60,6 +112,7 @@ export function PDFCanvas() {
         deleteField,
         duplicateField,
         activeTool,
+        setActiveTool,
         clearActiveTool,
         addFieldAtPosition,
         showFieldBorders,
@@ -78,11 +131,25 @@ export function PDFCanvas() {
     const [precisionMode, setPrecisionMode] = useState(false);
     const [autoZoom, setAutoZoom] = useState<number | null>(null);
     const [stickyZoom, setStickyZoom] = useState(false);
-    const [autoZoomEnabled, setAutoZoomEnabled] = useState(true); // Toggle for auto smart zoom
+    const [autoZoomEnabled, setAutoZoomEnabled] = useState(false); // Toggle for auto smart zoom
     const [magnifierPosition, setMagnifierPosition] = useState<{ x: number; y: number } | null>(null);
     const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+    const [iconDropdownOpen, setIconDropdownOpen] = useState(false);
+    const [selectedIconColor, setSelectedIconColor] = useState('#000000');
     const containerRef = useRef<HTMLDivElement>(null);
     const pdfCanvasRef = useRef<HTMLDivElement>(null);
+    const iconDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close icon dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (iconDropdownRef.current && !iconDropdownRef.current.contains(event.target as Node)) {
+                setIconDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Droppable area for the current page
     const { setNodeRef, isOver } = useDroppable({
@@ -429,13 +496,38 @@ export function PDFCanvas() {
         }
     }, [selectedFieldId, fields, deleteField, duplicateField, updateField, selectField, activeTool, clearActiveTool, toggleHighlightAll]);
 
-    // Add keyboard event listener
+    // Mouse wheel zoom handler (Cmd/Ctrl + scroll)
+    const handleMouseWheel = useCallback((e: WheelEvent) => {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const cmdKey = isMac ? e.metaKey : e.ctrlKey;
+
+        // Only zoom if Cmd/Ctrl is pressed and we're in the PDF editor
+        if (!cmdKey) return;
+
+        // Check if the event target is within the PDF canvas container
+        if (!containerRef.current?.contains(e.target as Node)) return;
+
+        e.preventDefault();
+
+        // Determine zoom direction: deltaY < 0 means scroll up (zoom in), > 0 means scroll down (zoom out)
+        const zoomStep = 0.1;
+        const direction = e.deltaY < 0 ? 1 : -1;
+        const newZoom = Math.max(0.3, Math.min(4, zoom + direction * zoomStep));
+
+        setZoom(newZoom);
+    }, [zoom]);
+
+    // Add keyboard and mouse wheel event listeners
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
+        // Use capture phase for wheel event to ensure we catch it before other handlers
+        containerRef.current?.addEventListener('wheel', handleMouseWheel, { passive: false });
+        
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
+            containerRef.current?.removeEventListener('wheel', handleMouseWheel);
         };
-    }, [handleKeyDown]);
+    }, [handleKeyDown, handleMouseWheel]);
 
     if (!currentPdf) return null;
 
@@ -630,6 +722,142 @@ export function PDFCanvas() {
                     >
                         <Keyboard className="w-4 h-4" />
                     </Button>
+                </div>
+            </div>
+
+            {/* Tools Toolbar - MS Word/Paint style */}
+            <div className="bg-card border-b border-border px-3 py-2">
+                <div className="flex items-center gap-1">
+                    {/* Tool selection label */}
+                    <span className="text-xs font-medium text-muted-foreground mr-2 select-none">Tools:</span>
+                    
+                    {/* Separator */}
+                    <div className="w-px h-7 bg-border mr-1" />
+                    
+                    {/* Field type buttons */}
+                    {fieldTypes.map((item) => (
+                        item.type === 'ICON' ? (
+                            <div key={item.type} className="relative" ref={iconDropdownRef}>
+                                <button
+                                    onClick={() => setIconDropdownOpen(!iconDropdownOpen)}
+                                    className={cn(
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-all text-sm font-medium",
+                                        iconDropdownOpen && "bg-muted border-primary/50 shadow-sm",
+                                        activeTool?.type === 'ICON' 
+                                            ? "bg-primary text-primary-foreground border-primary shadow-sm" 
+                                            : "bg-card border-border hover:bg-muted hover:border-muted-foreground/30"
+                                    )}
+                                >
+                                    <item.icon className="w-4 h-4" />
+                                    <span>{activeTool?.type === 'ICON' ? activeTool.iconVariant : item.label}</span>
+                                    <ChevronDown className={cn(
+                                        "w-3 h-3 transition-transform", 
+                                        iconDropdownOpen && "rotate-180"
+                                    )} />
+                                </button>
+                                
+                                {/* Icons Dropdown */}
+                                {iconDropdownOpen && (
+                                    <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 p-3 space-y-3 min-w-[300px]">
+                                        {/* Color Selection */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-medium text-muted-foreground">Icon Color</label>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {ICON_COLORS.map((color) => (
+                                                    <button
+                                                        key={color.value}
+                                                        onClick={() => setSelectedIconColor(color.value)}
+                                                        className={cn(
+                                                            "w-6 h-6 rounded-full border-2 transition-all",
+                                                            selectedIconColor === color.value 
+                                                                ? "ring-2 ring-primary ring-offset-2" 
+                                                                : "border-border hover:scale-110"
+                                                        )}
+                                                        style={{ backgroundColor: color.value }}
+                                                        title={color.label}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Icon Selection */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-medium text-muted-foreground">Select Icon</label>
+                                            <div className="grid grid-cols-4 gap-1.5 max-h-[200px] overflow-y-auto">
+                                                {ICON_VARIANTS.map((variant) => {
+                                                    const IconComp = iconComponentMap[variant.icon];
+                                                    return (
+                                                        <button
+                                                            key={variant.value}
+                                                            onClick={() => {
+                                                                setActiveTool({
+                                                                    type: 'ICON',
+                                                                    iconVariant: variant.value as IconVariant,
+                                                                    iconColor: selectedIconColor,
+                                                                });
+                                                                setIconDropdownOpen(false);
+                                                            }}
+                                                            className={cn(
+                                                                "flex flex-col items-center justify-center p-2 rounded-md border transition-colors gap-1",
+                                                                activeTool?.type === 'ICON' && activeTool.iconVariant === variant.value
+                                                                    ? "bg-primary/10 border-primary"
+                                                                    : "border-border hover:bg-muted hover:border-primary/50"
+                                                            )}
+                                                            title={variant.label}
+                                                        >
+                                                            <IconComp 
+                                                                className="w-5 h-5" 
+                                                                style={{ color: selectedIconColor }}
+                                                            />
+                                                            <span className="text-[9px] text-muted-foreground truncate w-full text-center">
+                                                                {variant.label.split(' ')[0]}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <button
+                                key={item.type}
+                                onClick={() => {
+                                    if (activeTool?.type === item.type) {
+                                        clearActiveTool();
+                                    } else {
+                                        setActiveTool({ type: item.type });
+                                    }
+                                }}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-all text-sm font-medium",
+                                    activeTool?.type === item.type 
+                                        ? "bg-primary text-primary-foreground border-primary shadow-sm" 
+                                        : "bg-card border-border hover:bg-muted hover:border-muted-foreground/30"
+                                )}
+                                title={`Add ${item.label} field`}
+                            >
+                                <item.icon className="w-4 h-4" />
+                                <span>{item.label}</span>
+                            </button>
+                        )
+                    ))}
+                    
+                    {/* Separator */}
+                    <div className="w-px h-7 bg-border mx-2" />
+                    
+                    {/* Deselect tool button - only visible when a tool is active */}
+                    {activeTool && (
+                        <button
+                            onClick={clearActiveTool}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-muted hover:bg-muted/80 transition-all text-sm font-medium text-foreground"
+                            title="Deselect tool (ESC)"
+                        >
+                            <MousePointer className="w-4 h-4" />
+                            <span>Select</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -872,7 +1100,7 @@ export function PDFCanvas() {
 
             {/* Floating Exit Zoom Panel - Always visible when at high zoom */}
             {stickyZoom && zoom > 2 && (
-                <div className="fixed bottom-6 right-6 z-[100] animate-fade-in">
+                <div className="fixed bottom-6 right-6 z-100 animate-fade-in">
                     <div className="bg-card rounded-2xl shadow-xl p-4 border-2 border-primary">
                         <div className="flex items-center gap-4">
                             <div className="text-foreground">
@@ -908,7 +1136,7 @@ export function PDFCanvas() {
 
             {/* Floating Highlight Legend */}
             {(highlightFieldType || activeTool) && (
-                <div className="fixed bottom-6 left-6 z-[100] animate-fade-in">
+                <div className="fixed bottom-6 left-6 z-100 animate-fade-in">
                     <div className="bg-card text-foreground rounded-xl shadow-xl p-4 border border-border">
                         <div className="flex items-center justify-between gap-4 mb-3">
                             <div className="flex items-center gap-2">

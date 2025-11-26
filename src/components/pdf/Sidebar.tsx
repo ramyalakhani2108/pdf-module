@@ -1,18 +1,18 @@
 'use client';
 
-import { useEditorStore, ActiveTool } from '@/lib/store';
+import { useEditorStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { InputType, IconVariant } from '@/lib/types';
+import { IconVariant } from '@/lib/types';
 import {
-    Type, Calendar, Hash, Mail, PenTool, Image as ImageIcon, 
     Save, Trash2, Settings, Check, X as XIcon, Circle, 
     CheckCircle, XCircle, Square, CheckSquare, Star, Heart,
-    ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronDown, Shapes,
-    ToggleLeft, ToggleRight, Eye, EyeOff, MousePointer, Crosshair
+    ArrowRight, ArrowLeft, ArrowUp, ArrowDown,
+    Eye, EyeOff, Layers
 } from 'lucide-react';
 import { cn, generateSlug } from '@/lib/utils';
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { ICON_VARIANTS, ICON_COLORS, FONT_CONFIG } from '@/lib/constants';
+import { ItemsPanel } from './ItemsPanel';
 
 // Icon mapping for lucide-react icons
 const iconComponentMap: Record<string, React.ElementType> = {
@@ -31,90 +31,19 @@ const iconComponentMap: Record<string, React.ElementType> = {
     'ArrowDown': ArrowDown,
 };
 
-const fieldTypes: { type: InputType; label: string; icon: React.ElementType }[] = [
-    { type: 'TEXT', label: 'Text Field', icon: Type },
-    { type: 'DATE', label: 'Date Picker', icon: Calendar },
-    { type: 'NUMBER', label: 'Number', icon: Hash },
-    { type: 'EMAIL', label: 'Email', icon: Mail },
-    { type: 'ICON', label: 'Icons', icon: Shapes },
-    { type: 'SIGNATURE', label: 'Signature', icon: PenTool },
-    { type: 'IMAGE', label: 'Image', icon: ImageIcon },
-];
-
 export function Sidebar() {
     const {
         currentPdf,
-        currentPage,
-        addField,
         selectedFieldId,
         fields,
         updateField,
         deleteField,
-        selectField,
-        activeTool,
-        setActiveTool,
-        clearActiveTool
     } = useEditorStore();
 
     const [saving, setSaving] = useState(false);
-    const [iconDropdownOpen, setIconDropdownOpen] = useState(false);
-    const [selectedIconColor, setSelectedIconColor] = useState('#000000');
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIconDropdownOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    // Handle ESC key to deselect tool
-    useEffect(() => {
-        function handleKeyDown(event: KeyboardEvent) {
-            if (event.key === 'Escape' && activeTool) {
-                clearActiveTool();
-            }
-        }
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [activeTool, clearActiveTool]);
+    const [activeTab, setActiveTab] = useState<'properties' | 'items'>('properties');
 
     const selectedField = fields.find(f => f.id === selectedFieldId);
-
-    // Toggle tool selection (click again to deselect)
-    const handleToolSelect = (type: InputType, iconVariant?: IconVariant, iconColor?: string) => {
-        // If clicking the same tool, deselect it
-        if (activeTool?.type === type && 
-            (type !== 'ICON' || activeTool.iconVariant === iconVariant)) {
-            clearActiveTool();
-            return;
-        }
-        
-        // Set the active tool
-        setActiveTool({
-            type,
-            iconVariant: type === 'ICON' ? iconVariant : undefined,
-            iconColor: type === 'ICON' ? (iconColor || selectedIconColor) : undefined,
-        });
-        
-        // Close icon dropdown after selection
-        if (type === 'ICON') {
-            setIconDropdownOpen(false);
-        }
-    };
-
-    // Legacy function for backwards compatibility
-    const handleAddField = (type: InputType, iconVariant?: IconVariant, iconColor?: string) => {
-        handleToolSelect(type, iconVariant, iconColor);
-    };
-
-    const handleAddIconField = (variant: IconVariant) => {
-        handleToolSelect('ICON', variant, selectedIconColor);
-    };
 
     const handleSave = async () => {
         if (!currentPdf) return;
@@ -154,174 +83,66 @@ export function Sidebar() {
 
     return (
         <div className="w-80 border-l border-border bg-surface flex flex-col h-full">
-            <div className="p-4 border-b border-border flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-lg text-foreground">PDF Editor Tools</h2>
-                    <Button
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="gap-2"
-                    >
-                        <Save className="w-4 h-4" />
-                        {saving ? 'Saving...' : 'Save'}
-                    </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                    Click a field type to add to PDF. Drag to position, resize with corners, edit properties below.
-                </p>
+            {/* Header with Save */}
+            <div className="p-3 border-b border-border flex items-center justify-between">
+                <h2 className="font-semibold text-sm text-foreground">Editor</h2>
+                <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="gap-1.5 h-7 text-xs"
+                >
+                    <Save className="w-3.5 h-3.5" />
+                    {saving ? 'Saving...' : 'Save'}
+                </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                {/* Active Tool Indicator - Clean and minimal */}
-                {activeTool && (
-                    <div className="bg-primary text-primary-foreground rounded-lg p-3 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Crosshair className="w-4 h-4" />
-                                <span className="text-sm font-medium">
-                                    {activeTool.type === 'ICON' 
-                                        ? `${activeTool.iconVariant} Icon` 
-                                        : `${activeTool.type} Field`}
-                                </span>
-                            </div>
-                            <button
-                                onClick={clearActiveTool}
-                                className="p-1 hover:bg-foreground/10 rounded transition-colors"
-                                title="Cancel (ESC)"
-                            >
-                                <XIcon className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <p className="text-xs opacity-80 mt-1">
-                            Click on PDF to place • ESC to cancel
-                        </p>
-                    </div>
-                )}
+            {/* Tabs */}
+            <div className="flex border-b border-border">
+                <button
+                    onClick={() => setActiveTab('properties')}
+                    className={cn(
+                        "flex-1 px-4 py-2 text-xs font-medium transition-colors relative",
+                        activeTab === 'properties' 
+                            ? "text-primary" 
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    <span className="flex items-center justify-center gap-1.5">
+                        <Settings className="w-3.5 h-3.5" />
+                        Properties
+                    </span>
+                    {activeTab === 'properties' && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    )}
+                </button>
+                <button
+                    onClick={() => setActiveTab('items')}
+                    className={cn(
+                        "flex-1 px-4 py-2 text-xs font-medium transition-colors relative",
+                        activeTab === 'items' 
+                            ? "text-primary" 
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    <span className="flex items-center justify-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5" />
+                        Items
+                    </span>
+                    {activeTab === 'items' && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    )}
+                </button>
+            </div>
 
-                {/* Field Types */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-muted-foreground">Select Tool</h3>
-                        {activeTool && (
-                            <button
-                                onClick={clearActiveTool}
-                                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                            >
-                                <MousePointer className="w-3 h-3" />
-                                Deselect
-                            </button>
-                        )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        {fieldTypes.map((item) => (
-                            item.type === 'ICON' ? (
-                                <div key={item.type} className="relative" ref={dropdownRef}>
-                                    <button
-                                        onClick={() => setIconDropdownOpen(!iconDropdownOpen)}
-                                        className={cn(
-                                            "w-full flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-muted transition-all gap-2",
-                                            iconDropdownOpen && "ring-2 ring-primary bg-muted",
-                                            activeTool?.type === 'ICON' && "ring-2 ring-primary bg-primary/5 border-primary/30"
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            <item.icon className={cn(
-                                                "w-5 h-5",
-                                                activeTool?.type === 'ICON' && "text-primary"
-                                            )} />
-                                            <ChevronDown className={cn(
-                                                "w-3 h-3 transition-transform", 
-                                                iconDropdownOpen && "rotate-180"
-                                            )} />
-                                        </div>
-                                        <span className={cn(
-                                            "text-xs font-medium",
-                                            activeTool?.type === 'ICON' && "text-primary"
-                                        )}>
-                                            {activeTool?.type === 'ICON' ? `✓ ${activeTool.iconVariant}` : item.label}
-                                        </span>
-                                    </button>
-                                    
-                                    {/* Icons Dropdown */}
-                                    {iconDropdownOpen && (
-                                        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-3 space-y-3 min-w-[280px]">
-                                            {/* Color Selection */}
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-muted-foreground">Icon Color</label>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {ICON_COLORS.map((color) => (
-                                                        <button
-                                                            key={color.value}
-                                                            onClick={() => setSelectedIconColor(color.value)}
-                                                            className={cn(
-                                                                "w-6 h-6 rounded-full border-2 transition-all",
-                                                                selectedIconColor === color.value 
-                                                                    ? "ring-2 ring-primary ring-offset-2" 
-                                                                    : "border-border hover:scale-110"
-                                                            )}
-                                                            style={{ backgroundColor: color.value }}
-                                                            title={color.label}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Icon Selection */}
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-muted-foreground">Select Icon</label>
-                                                <div className="grid grid-cols-4 gap-1.5 max-h-[200px] overflow-y-auto">
-                                                    {ICON_VARIANTS.map((variant) => {
-                                                        const IconComp = iconComponentMap[variant.icon];
-                                                        return (
-                                                            <button
-                                                                key={variant.value}
-                                                                onClick={() => handleAddIconField(variant.value as IconVariant)}
-                                                                className="flex flex-col items-center justify-center p-2 rounded-md border border-border hover:bg-muted hover:border-primary transition-colors gap-1"
-                                                                title={variant.label}
-                                                            >
-                                                                <IconComp 
-                                                                    className="w-5 h-5" 
-                                                                    style={{ color: selectedIconColor }}
-                                                                />
-                                                                <span className="text-[9px] text-muted-foreground truncate w-full text-center">
-                                                                    {variant.label.split(' ')[0]}
-                                                                </span>
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <button
-                                    key={item.type}
-                                    onClick={() => handleToolSelect(item.type)}
-                                    className={cn(
-                                        "flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-muted transition-all gap-2",
-                                        activeTool?.type === item.type && "ring-2 ring-primary bg-primary/5 border-primary/30"
-                                    )}
-                                >
-                                    <item.icon className={cn(
-                                        "w-5 h-5",
-                                        activeTool?.type === item.type && "text-primary"
-                                    )} />
-                                    <span className={cn(
-                                        "text-xs font-medium",
-                                        activeTool?.type === item.type && "text-primary"
-                                    )}>
-                                        {activeTool?.type === item.type ? `✓ ${item.label}` : item.label}
-                                    </span>
-                                </button>
-                            )
-                        ))}
-                    </div>
-                </div>
-
-                {/* Properties Panel */}
-                {selectedField ? (
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+                {activeTab === 'items' ? (
+                    <ItemsPanel />
+                ) : (
+                    <>
+                        {/* Properties Panel */}
+                        {selectedField ? (
                     <div className="space-y-4 border-t pt-4 animate-slide-up">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -340,7 +161,7 @@ export function Sidebar() {
 
                         <div className="space-y-3">
                             {/* Quick Size Presets for Small Fields */}
-                            {(selectedField.width < 50 || selectedField.height < 50) && (
+                           {/*  {(selectedField.width < 50 || selectedField.height < 50) && (
                                 <div className="bg-primary/5 border-2 border-primary/20 rounded-lg p-3 space-y-2 shadow-sm">
                                     <div className="flex items-center gap-1">
                                         <span className="text-[10px] font-bold text-primary uppercase">⚡ Tiny Field Detected ({selectedField.width}×{selectedField.height}px)</span>
@@ -375,7 +196,7 @@ export function Sidebar() {
                                     )}
                                     <p className="text-[9px] text-muted-foreground italic">💡 Tip: Enable Precision Mode (green magnifier in toolbar) for even more control</p>
                                 </div>
-                            )}
+                            )} */}
                             
                             <div className="space-y-1">
                                 <label className="text-xs font-medium">Label</label>
@@ -557,6 +378,89 @@ export function Sidebar() {
                                 </>
                             )}
 
+                            {/* Image Properties */}
+                            {selectedField.inputType === 'IMAGE' && (
+                                <div className="space-y-2 bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
+                                    <h4 className="text-xs font-medium flex items-center gap-2">
+                                        <span>🖼️</span>
+                                        Image Fit Mode
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-1">
+                                        {([
+                                            { value: 'contain', label: 'Contain', desc: 'Fit inside, keep ratio' },
+                                            { value: 'cover', label: 'Cover', desc: 'Fill area, crop edges' },
+                                            { value: 'fill', label: 'Stretch', desc: 'Stretch to fill' },
+                                            { value: 'none', label: 'Original', desc: 'No scaling' },
+                                        ] as const).map((mode) => (
+                                            <button
+                                                key={mode.value}
+                                                onClick={() => updateField(selectedField.id, { imageFit: mode.value })}
+                                                className={cn(
+                                                    "p-2 rounded border text-left transition-all",
+                                                    (selectedField.imageFit || 'contain') === mode.value
+                                                        ? "bg-amber-500/10 border-amber-500 text-amber-700"
+                                                        : "bg-muted hover:bg-muted/80 border-border"
+                                                )}
+                                            >
+                                                <span className="text-xs font-medium block">{mode.label}</span>
+                                                <span className="text-[9px] text-muted-foreground">{mode.desc}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-[9px] text-amber-600 mt-1">
+                                        💡 "Contain" is recommended for best quality without distortion
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* FILLABLE Field Properties */}
+                            {selectedField.inputType === 'FILLABLE' && (
+                                <div className="space-y-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
+                                    <h4 className="text-xs font-medium flex items-center gap-2">
+                                        <span>📝</span>
+                                        Native PDF Form Field
+                                    </h4>
+                                    <p className="text-[10px] text-emerald-700">
+                                        This field will be fillable in PDF viewers like Adobe Reader, Chrome, etc.
+                                    </p>
+                                    
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium">Placeholder Text</label>
+                                        <input
+                                            type="text"
+                                            value={selectedField.placeholder || ''}
+                                            onChange={(e) => updateField(selectedField.id, { placeholder: e.target.value })}
+                                            placeholder="Enter placeholder text..."
+                                            className="w-full h-8 rounded-md border bg-transparent px-2 text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium">Font Size</label>
+                                        <input
+                                            type="number"
+                                            min={FONT_CONFIG.MIN_FONT_SIZE}
+                                            step="0.5"
+                                            value={selectedField.fontSize}
+                                            onChange={(e) => updateField(selectedField.id, { 
+                                                fontSize: Math.max(FONT_CONFIG.MIN_FONT_SIZE, Number(e.target.value)) 
+                                            })}
+                                            className="w-full h-8 rounded-md border bg-transparent px-2 text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="bg-emerald-50 border border-emerald-200 rounded p-2 mt-2">
+                                        <p className="text-[9px] text-emerald-700 font-medium">📌 How it works:</p>
+                                        <ul className="text-[9px] text-emerald-600 mt-1 space-y-0.5 list-disc list-inside">
+                                            <li>Cannot be filled in preview mode</li>
+                                            <li>After PDF download, open in any PDF viewer</li>
+                                            <li>User can type directly into this field</li>
+                                            <li>Perfect for end-user fillable forms</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+
                             {['TEXT', 'EMAIL', 'NUMBER', 'DATE'].includes(selectedField.inputType) && (
                                 <>
                                     <div className="space-y-1">
@@ -651,12 +555,201 @@ export function Sidebar() {
                                     </div>
                                 </>
                             )}
+
+                            {/* Border & Radius Settings - Available for all field types */}
+                            <div className="space-y-3 pt-3 border-t border-border">
+                                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Appearance</h4>
+                                
+                                {/* Border Radius */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium">Border Radius</label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max={Math.round(Math.min(selectedField.width, selectedField.height) / 2)}
+                                            value={selectedField.borderRadius || 0}
+                                            onChange={(e) => updateField(selectedField.id, { borderRadius: Number(e.target.value) })}
+                                            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                                        />
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={selectedField.borderRadius || 0}
+                                            onChange={(e) => updateField(selectedField.id, { borderRadius: Number(e.target.value) })}
+                                            className="w-14 h-8 rounded-md border bg-transparent px-2 text-sm text-center"
+                                        />
+                                        <span className="text-xs text-muted-foreground">px</span>
+                                    </div>
+                                    {/* Quick radius presets */}
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        <button
+                                            onClick={() => updateField(selectedField.id, { borderRadius: 0 })}
+                                            className={cn(
+                                                "px-2 py-1 text-[10px] rounded border transition-all",
+                                                (selectedField.borderRadius || 0) === 0
+                                                    ? "bg-primary text-white border-primary"
+                                                    : "bg-muted hover:bg-muted/80 border-border"
+                                            )}
+                                        >
+                                            Square
+                                        </button>
+                                        {[4, 8, 12].map((radius) => (
+                                            <button
+                                                key={radius}
+                                                onClick={() => updateField(selectedField.id, { borderRadius: radius })}
+                                                className={cn(
+                                                    "px-2 py-1 text-[10px] rounded border transition-all",
+                                                    (selectedField.borderRadius || 0) === radius
+                                                        ? "bg-primary text-white border-primary"
+                                                        : "bg-muted hover:bg-muted/80 border-border"
+                                                )}
+                                            >
+                                                {radius}px
+                                            </button>
+                                        ))}
+                                        <button
+                                            onClick={() => {
+                                                const maxRadius = Math.round(Math.min(selectedField.width, selectedField.height) / 2);
+                                                updateField(selectedField.id, { borderRadius: maxRadius });
+                                            }}
+                                            className={cn(
+                                                "px-2 py-1 text-[10px] rounded border transition-all",
+                                                (selectedField.borderRadius || 0) >= Math.round(Math.min(selectedField.width, selectedField.height) / 2) - 1
+                                                    ? "bg-primary text-white border-primary"
+                                                    : "bg-muted hover:bg-muted/80 border-border"
+                                            )}
+                                        >
+                                            Circle
+                                        </button>
+                                    </div>
+                                    <p className="text-[9px] text-muted-foreground mt-1">
+                                        Max: {Math.round(Math.min(selectedField.width, selectedField.height) / 2)}px (50% = circle)
+                                    </p>
+                                </div>
+
+                                {/* Border Toggle */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-medium">Border</label>
+                                        <button
+                                            onClick={() => updateField(selectedField.id, { 
+                                                borderEnabled: !selectedField.borderEnabled,
+                                                // Set defaults when enabling
+                                                ...((!selectedField.borderEnabled) && {
+                                                    borderWidth: selectedField.borderWidth || 1,
+                                                    borderStyle: selectedField.borderStyle || 'solid',
+                                                    borderColor: selectedField.borderColor || '#000000'
+                                                })
+                                            })}
+                                            className={cn(
+                                                "relative w-10 h-5 rounded-full transition-colors duration-200",
+                                                selectedField.borderEnabled
+                                                    ? "bg-primary" 
+                                                    : "bg-muted"
+                                            )}
+                                        >
+                                            <span className={cn(
+                                                "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200",
+                                                selectedField.borderEnabled
+                                                    ? "left-5" 
+                                                    : "left-0.5"
+                                            )} />
+                                        </button>
+                                    </div>
+
+                                    {/* Border Properties (shown when enabled) */}
+                                    {selectedField.borderEnabled && (
+                                        <div className="space-y-2 pl-2 border-l-2 border-primary/20 ml-1">
+                                            {/* Border Width */}
+                                            <div className="space-y-1">
+                                                <label className="text-[11px] text-muted-foreground">Width</label>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="range"
+                                                        min="1"
+                                                        max="5"
+                                                        value={selectedField.borderWidth || 1}
+                                                        onChange={(e) => updateField(selectedField.id, { borderWidth: Number(e.target.value) })}
+                                                        className="flex-1 h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                                                    />
+                                                    <span className="text-xs w-8 text-center">{selectedField.borderWidth || 1}px</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Border Style */}
+                                            <div className="space-y-1">
+                                                <label className="text-[11px] text-muted-foreground">Style</label>
+                                                <div className="flex gap-1">
+                                                    {(['solid', 'dashed', 'dotted'] as const).map((style) => (
+                                                        <button
+                                                            key={style}
+                                                            onClick={() => updateField(selectedField.id, { borderStyle: style })}
+                                                            className={cn(
+                                                                "flex-1 py-1.5 text-[10px] capitalize rounded border-2 transition-all",
+                                                                (selectedField.borderStyle || 'solid') === style
+                                                                    ? "bg-primary/10 border-primary text-primary"
+                                                                    : "bg-muted hover:bg-muted/80 border-transparent"
+                                                            )}
+                                                            style={{
+                                                                borderBottomStyle: style,
+                                                                borderBottomWidth: '2px',
+                                                                borderBottomColor: (selectedField.borderStyle || 'solid') === style ? 'currentColor' : '#888'
+                                                            }}
+                                                        >
+                                                            {style}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Border Color */}
+                                            <div className="space-y-1">
+                                                <label className="text-[11px] text-muted-foreground">Color</label>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="color"
+                                                        value={selectedField.borderColor || '#000000'}
+                                                        onChange={(e) => updateField(selectedField.id, { borderColor: e.target.value })}
+                                                        className="w-8 h-7 rounded border cursor-pointer"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={selectedField.borderColor || '#000000'}
+                                                        onChange={(e) => updateField(selectedField.id, { borderColor: e.target.value })}
+                                                        className="flex-1 h-7 rounded-md border bg-transparent px-2 text-xs font-mono"
+                                                        placeholder="#000000"
+                                                    />
+                                                </div>
+                                                {/* Quick color buttons */}
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {['#000000', '#374151', '#6B7280', '#DC2626', '#2563EB', '#16A34A', '#CA8A04', '#9333EA'].map((color) => (
+                                                        <button
+                                                            key={color}
+                                                            onClick={() => updateField(selectedField.id, { borderColor: color })}
+                                                            className={cn(
+                                                                "w-5 h-5 rounded border-2 transition-all",
+                                                                selectedField.borderColor === color && "ring-2 ring-primary ring-offset-1"
+                                                            )}
+                                                            style={{ backgroundColor: color, borderColor: color === '#000000' ? '#333' : color }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="border-t pt-4 text-center text-sm text-muted-foreground">
-                        Select a field to edit properties
+                    <div className="text-center text-sm text-muted-foreground py-8">
+                        <Settings className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
+                        <p>Select a field to edit</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">Click on any item in the canvas</p>
                     </div>
+                )}
+                    </>
                 )}
             </div>
         </div>

@@ -105,6 +105,13 @@ interface EditorState {
   duplicateField: (id: string) => void;
   selectField: (id: string | null) => void;
   
+  // Z-Index / Layer Actions
+  bringToFront: (id: string) => void;
+  sendToBack: (id: string) => void;
+  bringForward: (id: string) => void;
+  sendBackward: (id: string) => void;
+  reorderFields: (pageNumber: number, orderedIds: string[]) => void;
+  
   // Tool Actions (MS Word/Paint-like)
   setActiveTool: (tool: ActiveTool | null) => void;
   clearActiveTool: () => void;
@@ -249,7 +256,12 @@ export const useEditorStore = create<EditorState>()(
        * @param position - X/Y coordinates
        */
       addFieldWithDefaults: (pdfFileId, inputType, pageNumber, position) => {
+        const { fields } = get();
         const defaults = FIELD_DEFAULTS[inputType] || FIELD_DEFAULTS.TEXT;
+        // Calculate max zIndex for this page
+        const pageFields = fields.filter(f => f.pageNumber === pageNumber);
+        const maxZIndex = pageFields.reduce((max, f) => Math.max(max, f.zIndex || 0), 0);
+        
         const newField: PdfInput = {
           id: crypto.randomUUID(),
           pdfFileId,
@@ -270,6 +282,7 @@ export const useEditorStore = create<EditorState>()(
           iconVariant: inputType === 'ICON' ? 'CHECK' : null,
           iconColor: inputType === 'ICON' ? '#000000' : null,
           defaultVisible: inputType === 'ICON' ? true : null,
+          zIndex: maxZIndex + 1,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -337,6 +350,114 @@ export const useEditorStore = create<EditorState>()(
       selectField: (id) => set({ selectedFieldId: id }),
 
       // -----------------------------------------------------------------------
+      // Z-Index / Layer Actions
+      // -----------------------------------------------------------------------
+
+      /**
+       * Bring a field to the front (highest z-index on its page)
+       * @param id - Field ID to bring to front
+       */
+      bringToFront: (id) => {
+        const { fields } = get();
+        const field = fields.find(f => f.id === id);
+        if (!field) return;
+        
+        const pageFields = fields.filter(f => f.pageNumber === field.pageNumber);
+        const maxZIndex = pageFields.reduce((max, f) => Math.max(max, f.zIndex || 0), 0);
+        
+        set((state) => ({
+          fields: state.fields.map(f => 
+            f.id === id ? { ...f, zIndex: maxZIndex + 1, updatedAt: new Date() } : f
+          ),
+        }));
+      },
+
+      /**
+       * Send a field to the back (lowest z-index on its page)
+       * @param id - Field ID to send to back
+       */
+      sendToBack: (id) => {
+        const { fields } = get();
+        const field = fields.find(f => f.id === id);
+        if (!field) return;
+        
+        const pageFields = fields.filter(f => f.pageNumber === field.pageNumber);
+        const minZIndex = pageFields.reduce((min, f) => Math.min(min, f.zIndex || 0), 0);
+        
+        set((state) => ({
+          fields: state.fields.map(f => 
+            f.id === id ? { ...f, zIndex: minZIndex - 1, updatedAt: new Date() } : f
+          ),
+        }));
+      },
+
+      /**
+       * Bring a field forward by one layer
+       * @param id - Field ID to bring forward
+       */
+      bringForward: (id) => {
+        const { fields } = get();
+        const field = fields.find(f => f.id === id);
+        if (!field) return;
+        
+        const currentZIndex = field.zIndex || 0;
+        const pageFields = fields.filter(f => f.pageNumber === field.pageNumber && f.id !== id);
+        
+        // Find the next higher z-index
+        const higherFields = pageFields.filter(f => (f.zIndex || 0) > currentZIndex);
+        if (higherFields.length === 0) return; // Already at front
+        
+        const nextZIndex = Math.min(...higherFields.map(f => f.zIndex || 0));
+        
+        set((state) => ({
+          fields: state.fields.map(f => 
+            f.id === id ? { ...f, zIndex: nextZIndex + 1, updatedAt: new Date() } : f
+          ),
+        }));
+      },
+
+      /**
+       * Send a field backward by one layer
+       * @param id - Field ID to send backward
+       */
+      sendBackward: (id) => {
+        const { fields } = get();
+        const field = fields.find(f => f.id === id);
+        if (!field) return;
+        
+        const currentZIndex = field.zIndex || 0;
+        const pageFields = fields.filter(f => f.pageNumber === field.pageNumber && f.id !== id);
+        
+        // Find the next lower z-index
+        const lowerFields = pageFields.filter(f => (f.zIndex || 0) < currentZIndex);
+        if (lowerFields.length === 0) return; // Already at back
+        
+        const prevZIndex = Math.max(...lowerFields.map(f => f.zIndex || 0));
+        
+        set((state) => ({
+          fields: state.fields.map(f => 
+            f.id === id ? { ...f, zIndex: prevZIndex - 1, updatedAt: new Date() } : f
+          ),
+        }));
+      },
+
+      /**
+       * Reorder fields on a page based on drag-and-drop order
+       * @param pageNumber - Page number
+       * @param orderedIds - Array of field IDs in new order (first = back, last = front)
+       */
+      reorderFields: (pageNumber, orderedIds) => {
+        set((state) => ({
+          fields: state.fields.map(f => {
+            if (f.pageNumber !== pageNumber) return f;
+            const newIndex = orderedIds.indexOf(f.id);
+            if (newIndex === -1) return f;
+            return { ...f, zIndex: newIndex, updatedAt: new Date() };
+          }),
+        }));
+      },
+
+      // -----------------------------------------------------------------------
       // Tool Actions (MS Word/Paint-like click-to-place)
       // -----------------------------------------------------------------------
 
@@ -359,11 +480,15 @@ export const useEditorStore = create<EditorState>()(
        * @param position - X/Y coordinates where user clicked
        */
       addFieldAtPosition: (position) => {
-        const { activeTool, currentPdf, currentPage } = get();
+        const { activeTool, currentPdf, currentPage, fields } = get();
         
         if (!activeTool || !currentPdf) return;
         
         const defaults = FIELD_DEFAULTS[activeTool.type] || FIELD_DEFAULTS.TEXT;
+        
+        // Calculate max zIndex for this page
+        const pageFields = fields.filter(f => f.pageNumber === currentPage);
+        const maxZIndex = pageFields.reduce((max, f) => Math.max(max, f.zIndex || 0), 0);
         
         const newField: PdfInput = {
           id: crypto.randomUUID(),
@@ -387,6 +512,7 @@ export const useEditorStore = create<EditorState>()(
           iconVariant: activeTool.type === 'ICON' ? (activeTool.iconVariant || 'CHECK') : null,
           iconColor: activeTool.type === 'ICON' ? (activeTool.iconColor || '#000000') : null,
           defaultVisible: activeTool.type === 'ICON' ? true : null,
+          zIndex: maxZIndex + 1,
           createdAt: new Date(),
           updatedAt: new Date(),
         };

@@ -40,6 +40,7 @@ const shortcuts: ShortcutItem[] = [
     { keys: ['⌘/Ctrl', '+'], description: 'Zoom in', icon: ZoomIn, category: 'view' },
     { keys: ['⌘/Ctrl', '-'], description: 'Zoom out', icon: ZoomOut, category: 'view' },
     { keys: ['⌘/Ctrl', '0'], description: 'Reset zoom to 100%', category: 'view' },
+    { keys: ['⌘/Ctrl', 'Scroll'], description: 'Zoom in/out with mouse wheel', icon: ZoomIn, category: 'view' },
     { keys: ['G'], description: 'Toggle grid', category: 'view' },
     { keys: ['R'], description: 'Toggle rulers', category: 'view' },
     { keys: ['⌘/Ctrl', 'Shift', 'H'], description: 'Highlight all fields by type (color-coded)', category: 'view' },

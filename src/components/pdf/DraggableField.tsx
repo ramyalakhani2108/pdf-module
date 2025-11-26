@@ -1,5 +1,13 @@
 import { useDraggable } from '@dnd-kit/core';
-import { GripVertical, Type, Calendar, Hash, Mail, PenTool, Image as ImageIcon, X, Maximize2, Check, Circle, CheckCircle, XCircle, Square, CheckSquare, Star, Heart, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Shapes, ZoomIn } from 'lucide-react';
+import { 
+    GripVertical, Type, Calendar, Hash, Mail, PenTool, Image as ImageIcon, X, Maximize2, 
+    Check, Circle, CheckCircle, XCircle, Square, CheckSquare, Star, Heart, 
+    ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Shapes, ZoomIn,
+    // New icons
+    CircleDot, ThumbsUp, ThumbsDown, Flag, MapPin, Bookmark, Info, AlertTriangle, Minus, Plus,
+    // For FILLABLE type
+    FormInput
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PdfInput, InputType, IconVariant } from '@/lib/types';
 import { useEditorStore } from '@/lib/store';
@@ -26,6 +34,7 @@ const INPUT_TYPE_COLORS: Record<InputType, { border: string; bg: string; ring: s
     ICON: { border: 'border-purple-500', bg: 'bg-purple-500/20', ring: 'ring-purple-500' },
     SIGNATURE: { border: 'border-pink-500', bg: 'bg-pink-500/20', ring: 'ring-pink-500' },
     IMAGE: { border: 'border-amber-500', bg: 'bg-amber-500/20', ring: 'ring-amber-500' },
+    FILLABLE: { border: 'border-emerald-500', bg: 'bg-emerald-500/20', ring: 'ring-emerald-500' },
 };
 
 // Professional grid snapping - flexible options for different use cases
@@ -48,23 +57,37 @@ const typeIcons: Record<InputType, React.ElementType> = {
     ICON: Shapes,
     SIGNATURE: PenTool,
     IMAGE: ImageIcon,
+    FILLABLE: FormInput,
 };
 
-// Icon variant to component mapping
-const iconVariantComponents: Record<string, React.ElementType> = {
+// Icon variant to component mapping - includes filled variants
+const iconVariantComponents: Record<string, React.ElementType | { component: React.ElementType; filled: boolean }> = {
     'CHECK': Check,
     'CROSS': X,
     'CIRCLE': Circle,
+    'CIRCLE_FILLED': { component: CircleDot, filled: true },
     'CIRCLE_CHECK': CheckCircle,
     'CIRCLE_CROSS': XCircle,
     'SQUARE': Square,
+    'SQUARE_FILLED': { component: Square, filled: true },
     'SQUARE_CHECK': CheckSquare,
     'STAR': Star,
+    'STAR_FILLED': { component: Star, filled: true },
     'HEART': Heart,
+    'HEART_FILLED': { component: Heart, filled: true },
     'ARROW_RIGHT': ArrowRight,
     'ARROW_LEFT': ArrowLeft,
     'ARROW_UP': ArrowUp,
     'ARROW_DOWN': ArrowDown,
+    'THUMBS_UP': ThumbsUp,
+    'THUMBS_DOWN': ThumbsDown,
+    'FLAG': Flag,
+    'PIN': MapPin,
+    'BOOKMARK': Bookmark,
+    'INFO': Info,
+    'WARNING': AlertTriangle,
+    'MINUS': Minus,
+    'PLUS': Plus,
 };
 
 export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZoom, scale, showBorder = true, highlightType = null }: DraggableFieldProps) {
@@ -134,7 +157,10 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
         width: `${realWidth}px`,
         height: `${realHeight}px`,
         position: 'absolute',
-        zIndex: isSelected || isDragging || isResizing ? 50 : 10,
+        // Use field's zIndex, with higher values when selected/dragging/resizing
+        zIndex: isSelected || isDragging || isResizing 
+            ? 1000 + (field.zIndex || 0) 
+            : 10 + (field.zIndex || 0),
         // Clean box model - zero padding/margin for pixel-perfect placement
         margin: 0,
         padding: 0,
@@ -152,6 +178,14 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
         perspective: 1000,
         // Smooth touch handling
         touchAction: isDragging || isResizing ? 'none' : 'auto',
+        // Custom border radius from field settings
+        borderRadius: field.borderRadius ? `${field.borderRadius * scale}px` : undefined,
+        // Custom border from field settings (only when enabled)
+        ...(field.borderEnabled && {
+            borderWidth: `${(field.borderWidth || 1) * scale}px`,
+            borderStyle: field.borderStyle || 'solid',
+            borderColor: field.borderColor || '#000000',
+        }),
     };
 
     const Icon = typeIcons[field.inputType];
@@ -309,6 +343,11 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
     const isHighlighted = highlightType === 'ALL' || highlightType === field.inputType;
     const typeColors = INPUT_TYPE_COLORS[field.inputType];
 
+    // Don't render field if it's hidden
+    if (field.isVisible === false) {
+        return null;
+    }
+
     return (
         <>
             <div
@@ -454,7 +493,12 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
                     {field.inputType === 'ICON' && (
                         <div className="w-full h-full flex items-center justify-center">
                             {(() => {
-                                const IconComp = iconVariantComponents[field.iconVariant || 'CHECK'] || Check;
+                                const iconEntry = iconVariantComponents[field.iconVariant || 'CHECK'] || Check;
+                                // Check if it's a filled variant object or a simple component
+                                const isFilled = typeof iconEntry === 'object' && 'filled' in iconEntry;
+                                const IconComp = isFilled ? iconEntry.component : iconEntry as React.ElementType;
+                                const shouldFill = isFilled && iconEntry.filled;
+                                
                                 return (
                                     <IconComp 
                                         style={{
@@ -463,17 +507,47 @@ export function DraggableField({ field, isSelected, onSelect, onDelete, onSmartZ
                                             strokeWidth: scale > 2 ? 2 : 2.5, // Adjust stroke for zoom
                                             stroke: field.iconColor || '#4F46E5',
                                             color: field.iconColor || '#4F46E5',
+                                            fill: shouldFill ? (field.iconColor || '#4F46E5') : 'none',
                                         }}
                                     />
                                 );
                             })()}
                         </div>
                     )}
-                    {(field.inputType === 'SIGNATURE' || field.inputType === 'IMAGE') && (
+                    {field.inputType === 'IMAGE' && (
+                        <div 
+                            className="w-full h-full flex flex-col items-center justify-center gap-1"
+                            style={{
+                                // High quality image rendering hints
+                                imageRendering: 'auto',
+                            }}
+                        >
+                            <Icon className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-[8px] text-muted-foreground uppercase tracking-wide font-medium">
+                                {field.inputType}
+                            </span>
+                            <span className="text-[7px] text-amber-600 capitalize">
+                                {field.imageFit || 'contain'}
+                            </span>
+                        </div>
+                    )}
+                    {field.inputType === 'SIGNATURE' && (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-1">
                             <Icon className="w-4 h-4 text-muted-foreground" />
                             <span className="text-[8px] text-muted-foreground uppercase tracking-wide font-medium">
                                 {field.inputType}
+                            </span>
+                        </div>
+                    )}
+                    {field.inputType === 'FILLABLE' && (
+                        <div className="w-full h-full flex items-center justify-start px-2 border-2 border-dashed border-emerald-400 bg-emerald-50/50 rounded">
+                            <span 
+                                className="text-emerald-600/70 truncate"
+                                style={{
+                                    fontSize: `${Math.max(8, field.fontSize * scale * 0.8)}px`,
+                                }}
+                            >
+                                {field.placeholder || 'Fillable field...'}
                             </span>
                         </div>
                     )}
