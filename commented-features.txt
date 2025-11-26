@@ -1,0 +1,5 @@
+Drag overlay icons (Layers icon + small page label) — Disabled in `src/components/pdf/PageThumbnailSidebar.tsx` (DragOverlayCard). Uncomment <Layers className="w-5 h-5" /> and <span className="text-[10px] font-medium">Page {pageNumber}</span> to re-enable.
+
+Drag handle icon (GripVertical) — Disabled in `src/components/pdf/PageThumbnailSidebar.tsx` (ThumbnailCard). Uncomment <GripVertical className="w-3.5 h-3.5" /> to re-enable.
+
+Note: The drag listeners and underlying DnD functionality remain active even when icons are commented out; uncomment lines to restore the visual affordances only.

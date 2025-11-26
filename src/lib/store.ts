@@ -48,6 +48,8 @@ interface EditorState {
   currentPage: number;
   /** Total pages in the PDF */
   totalPages: number;
+  /** Custom page order for reordering (array of page numbers) */
+  pageOrder: number[] | null;
 
   // -------------------------------------------------------------------------
   // Fields State
@@ -79,12 +81,14 @@ interface EditorState {
   /** Which field type to highlight ('ALL' for all types, or specific InputType, null for none) */
   highlightFieldType: InputType | 'ALL' | null;
 
-  // -------------------------------------------------------------------------
+  // -----------------------------------------------------------------------
   // Actions
-  // -------------------------------------------------------------------------
+  // -----------------------------------------------------------------------
   // PDF Actions
   setPdf: (pdf: PdfFile | null, isImportedViaUrl?: boolean) => void;
   setCurrentPage: (page: number) => void;
+  setPageOrder: (order: number[]) => void;
+  reorderPages: (newOrder: number[]) => void;
   
   // Field Actions
   setFields: (fields: PdfInput[]) => void;
@@ -129,6 +133,7 @@ const initialState = {
   isImportedViaUrl: false,
   currentPage: 1,
   totalPages: 0,
+  pageOrder: null as number[] | null,
   fields: [],
   selectedFieldId: null,
   activeTool: null,
@@ -177,6 +182,7 @@ export const useEditorStore = create<EditorState>()(
           isImportedViaUrl,
           totalPages: pdf?.pageCount || 0,
           currentPage: 1,
+          pageOrder: pdf ? Array.from({ length: pdf.pageCount }, (_, i) => i + 1) : null,
           fields: [], // Clear fields when changing PDF
           selectedFieldId: null,
         });
@@ -190,6 +196,22 @@ export const useEditorStore = create<EditorState>()(
         const { totalPages } = get();
         const validPage = Math.max(1, Math.min(page, totalPages));
         set({ currentPage: validPage, selectedFieldId: null });
+      },
+
+      /**
+       * Set the page order array
+       * @param order - Array of page numbers in display order
+       */
+      setPageOrder: (order) => set({ pageOrder: order }),
+
+      /**
+       * Reorder pages (for drag and drop in thumbnail sidebar)
+       * @param newOrder - New array of page numbers in display order
+       */
+      reorderPages: (newOrder) => {
+        set({ pageOrder: newOrder });
+        // Note: This only affects the visual order in the sidebar
+        // Actual PDF page reordering would require server-side processing
       },
 
       // -----------------------------------------------------------------------

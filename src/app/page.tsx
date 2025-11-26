@@ -7,6 +7,7 @@ import { useFieldSync } from '@/hooks/use-field-sync';
 import { PDFUploader } from '@/components/pdf/PDFUploader';
 import { PDFCanvas } from '@/components/pdf/PDFCanvas';
 import { Sidebar } from '@/components/pdf/Sidebar';
+import { PageThumbnailSidebar } from '@/components/pdf/PageThumbnailSidebar';
 import { FileText, ArrowLeft, Loader2, AlertCircle, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { PdfInput } from '@/lib/types';
@@ -395,9 +396,15 @@ export default function Home() {
 
       {/* Editor Workspace */}
       <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* Left Sidebar - Page Thumbnails */}
+        <PageThumbnailSidebar />
+        
+        {/* Main PDF Canvas */}
         <div className="flex-1 relative min-w-0 overflow-hidden">
           <PDFCanvas />
         </div>
+        
+        {/* Right Sidebar - Field Tools */}
         <Sidebar />
       </div>
     </main>
