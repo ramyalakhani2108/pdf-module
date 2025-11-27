@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useEditorStore } from '@/lib/store';
 import { useFieldSync } from '@/hooks/use-field-sync';
+import { useToast } from '@/components/ui/toast';
+import { parseErrorMessage, isConnectionError } from '@/lib/error-utils';
 import { PDFUploader } from '@/components/pdf/PDFUploader';
 import { PDFCanvas } from '@/components/pdf/PDFCanvas';
 import { Sidebar } from '@/components/pdf/Sidebar';
@@ -38,6 +40,7 @@ function loadFieldsFromLocalStorage(pdfId: string): PdfInput[] | null {
 export function HomeContent() {
   const searchParams = useSearchParams();
   const { currentPdf, setPdf, setFields, reset } = useEditorStore();
+  const { error: showError } = useToast();
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importUrl, setImportUrl] = useState<string | null>(null);
@@ -107,8 +110,13 @@ export function HomeContent() {
       } else {
         console.log('[Fields] No fields found in database or localStorage');
       }
-    } catch (error) {
-      console.error('Failed to load fields from database:', error);
+    } catch (err) {
+      console.error('Failed to load fields from database:', err);
+      
+      // Show toast for connection errors
+      if (isConnectionError(err)) {
+        showError(parseErrorMessage(err, 'load'));
+      }
       
       // On database error, try localStorage backup
       const localBackup = loadFieldsFromLocalStorage(pdfId);
@@ -117,7 +125,7 @@ export function HomeContent() {
         setFields(localBackup);
       }
     }
-  }, [setFields]);
+  }, [setFields, showError]);
 
   // Check if PDF already exists in database
   const checkExistingPdf = useCallback(async (url: string): Promise<{ found: boolean; data?: Record<string, unknown> }> => {
@@ -195,11 +203,11 @@ export function HomeContent() {
           updatedAt: new Date(),
         }, true); // true = isImportedViaUrl
       } else {
-        setImportError(data.error || 'Failed to import PDF from URL');
+        setImportError(parseErrorMessage(data.error || 'Failed to import PDF', 'load'));
       }
-    } catch (error) {
-      console.error('Import error:', error);
-      setImportError('Failed to connect to server. Please try again.');
+    } catch (err) {
+      console.error('Import error:', err);
+      setImportError(parseErrorMessage(err, 'network'));
     } finally {
       setIsImporting(false);
     }

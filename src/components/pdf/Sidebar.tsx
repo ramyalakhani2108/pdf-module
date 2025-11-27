@@ -2,6 +2,8 @@
 
 import { useEditorStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
+import { parseErrorMessage } from '@/lib/error-utils';
 import { IconVariant } from '@/lib/types';
 import {
     Save, Trash2, Settings, Check, X as XIcon, Circle, 
@@ -40,6 +42,7 @@ export function Sidebar() {
         deleteField,
     } = useEditorStore();
 
+    const { success, error } = useToast();
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'properties' | 'items'>('properties');
     const [sidebarWidth, setSidebarWidth] = useState(320); // 80 * 4 = 320px (w-80)
@@ -111,10 +114,10 @@ export function Sidebar() {
 
             const result = await response.json();
             console.log('Saved successfully:', result);
-            alert(`Successfully saved ${result.data?.count || fields.length} inputs!`);
-        } catch (error) {
-            console.error('Save error:', error);
-            alert(error instanceof Error ? error.message : 'Failed to save inputs');
+            success(`Successfully saved ${result.data?.count || fields.length} inputs!`);
+        } catch (err) {
+            console.error('Save error:', err);
+            error(parseErrorMessage(err, 'save'));
         } finally {
             setSaving(false);
         }
