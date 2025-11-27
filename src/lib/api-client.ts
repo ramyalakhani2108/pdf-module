@@ -60,7 +60,7 @@ export class PdfApiClient {
 
   constructor(config: ApiConfig = {}) {
     this.baseUrl = config.baseUrl || '';
-    this.apiKey = config.apiKey || API_CONFIG.DEV_API_KEY;
+    this.apiKey = config.apiKey || API_CONFIG.DEV_API_KEY || '';
   }
 
   /**

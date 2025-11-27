@@ -22,7 +22,7 @@ import { API_CONFIG, ERROR_MESSAGES, CALIBRATION_CONFIG } from '@/lib/constants'
 import { IconVariant } from '@/lib/types';
 
 // Configure route for large PDFs (100MB, 1000+ pages)
-export const maxDuration = API_CONFIG.MAX_DURATION;
+export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 // =============================================================================
@@ -276,8 +276,14 @@ export async function POST(request: NextRequest) {
 
         case 'SIGNATURE':
         case 'IMAGE':
-          if (typeof value === 'string' && value.startsWith('data:image')) {
-            await drawImage(pdfDoc, page, value, { x: pdfX, y: pdfY }, input.width, input.height);
+          if (typeof value === 'string') {
+            // Handle both base64 data URLs and absolute image URLs
+            if (value.startsWith('data:image')) {
+              await drawImage(pdfDoc, page, value, { x: pdfX, y: pdfY }, input.width, input.height);
+            } else if (value.startsWith('http://') || value.startsWith('https://')) {
+              // Handle absolute URL - fetch the image
+              await drawImageFromUrl(pdfDoc, page, value, { x: pdfX, y: pdfY }, input.width, input.height);
+            }
           }
           break;
 
@@ -661,6 +667,64 @@ async function drawImage(
     }
   } catch (error) {
     console.error('Failed to embed image:', error);
+  }
+}
+
+/**
+ * Draw an image from an absolute URL (signature or image field)
+ */
+async function drawImageFromUrl(
+  pdfDoc: PDFDocument,
+  page: ReturnType<PDFDocument['getPages']>[0],
+  imageUrl: string,
+  fieldPosition: { x: number; y: number },
+  width: number,
+  height: number
+): Promise<void> {
+  try {
+    // Fetch the image from the URL
+    const response = await fetch(imageUrl);
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch image from URL: ${imageUrl}. Status: ${response.status}`);
+      return;
+    }
+
+    const contentType = response.headers.get('content-type');
+    const arrayBuffer = await response.arrayBuffer();
+    const imageBytes = Buffer.from(arrayBuffer);
+
+    let image;
+    if (contentType?.includes('image/png')) {
+      image = await pdfDoc.embedPng(imageBytes);
+    } else if (contentType?.includes('image/jpeg') || contentType?.includes('image/jpg')) {
+      image = await pdfDoc.embedJpg(imageBytes);
+    } else {
+      console.error(`Unsupported image format: ${contentType}`);
+      return;
+    }
+
+    if (image) {
+      const imgDims = image.scale(1);
+      const scaleX = width / imgDims.width;
+      const scaleY = height / imgDims.height;
+      const imgScale = Math.min(scaleX, scaleY);
+
+      const scaledWidth = imgDims.width * imgScale;
+      const scaledHeight = imgDims.height * imgScale;
+
+      const imgX = fieldPosition.x + (width - scaledWidth) / 2;
+      const imgY = fieldPosition.y + (height - scaledHeight) / 2;
+
+      page.drawImage(image, {
+        x: imgX,
+        y: imgY,
+        width: scaledWidth,
+        height: scaledHeight,
+      });
+    }
+  } catch (error) {
+    console.error(`Failed to fetch or embed image from URL: ${imageUrl}`, error);
   }
 }
 

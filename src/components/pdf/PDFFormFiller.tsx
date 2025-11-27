@@ -232,7 +232,10 @@ export function PDFFormFiller({ pdf, fields, isImported = false }: PDFFormFiller
 
             const data = await response.json();
             if (data.success) {
-                handleInputChange(slug, data.data.base64);
+                // Use absolute URL instead of base64 for better performance and flexibility
+                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                const absoluteUrl = `${baseUrl}${data.data.filePath}`;
+                handleInputChange(slug, absoluteUrl);
             }
         } catch (error) {
             console.error('Upload failed:', error);

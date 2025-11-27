@@ -77,7 +77,7 @@ import {
 } from '@/lib/constants';
 
 // Configure route for potentially slow downloads
-export const maxDuration = API_CONFIG.MAX_DURATION;
+export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 /**
