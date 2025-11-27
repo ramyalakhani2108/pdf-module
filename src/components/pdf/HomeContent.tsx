@@ -41,6 +41,7 @@ export function HomeContent() {
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importUrl, setImportUrl] = useState<string | null>(null);
+  const [importSource, setImportSource] = useState<'url-param' | 'postMessage' | null>(null);
   const hasCheckedExisting = useRef(false);
   const hasLoadedFields = useRef(false);
 
@@ -139,43 +140,8 @@ export function HomeContent() {
     }
   }, []);
 
-  // Check for fileUrl parameter and auto-import PDF (or load existing)
-  useEffect(() => {
-    const fileUrl = searchParams.get('fileUrl');
-    const fileName = searchParams.get('fileName');
-    
-    if (fileUrl && !currentPdf && !isImporting && !hasCheckedExisting.current) {
-      hasCheckedExisting.current = true;
-      setImportUrl(fileUrl);
-      importPdfFromUrl(fileUrl, fileName);
-    }
-  }, [searchParams, currentPdf, isImporting]);
-
-  // Clear state when fileUrl parameter is removed from URL (for URL-imported PDFs only)
-  useEffect(() => {
-    const fileUrl = searchParams.get('fileUrl');
-    
-    // If there's no fileUrl in URL but we have an importUrl (meaning PDF was imported via URL)
-    // and we have a currentPdf, then the URL parameter was removed - clear state
-    if (!fileUrl && importUrl && currentPdf) {
-      console.log('[PDF] URL parameter removed, clearing imported PDF state');
-      setImportUrl(null);
-      hasCheckedExisting.current = false;
-      hasLoadedFields.current = false;
-      reset();
-    }
-  }, [searchParams, importUrl, currentPdf, reset]);
-
-  // Load fields when currentPdf changes (either from localStorage or after import)
-  useEffect(() => {
-    if (currentPdf?.id) {
-      // Reset the flag when PDF ID changes to allow loading for new PDFs
-      hasLoadedFields.current = false;
-      loadFieldsFromDatabase(currentPdf.id);
-    }
-  }, [currentPdf?.id, loadFieldsFromDatabase]);
-
-  const importPdfFromUrl = async (url: string, customFileName?: string | null) => {
+  // Import PDF from URL - handles both URL params and postMessage
+  const importPdfFromUrl = useCallback(async (url: string, customFileName?: string | null) => {
     setIsImporting(true);
     setImportError(null);
 
@@ -237,7 +203,70 @@ export function HomeContent() {
     } finally {
       setIsImporting(false);
     }
-  };
+  }, [checkExistingPdf, setPdf]);
+
+  // Check for fileUrl parameter and auto-import PDF (or load existing)
+  useEffect(() => {
+    const fileUrl = searchParams.get('fileUrl');
+    const fileName = searchParams.get('fileName');
+    
+    if (fileUrl && !currentPdf && !isImporting && !hasCheckedExisting.current) {
+      hasCheckedExisting.current = true;
+      setImportUrl(fileUrl);
+      setImportSource('url-param');
+      importPdfFromUrl(fileUrl, fileName);
+    }
+  }, [searchParams, currentPdf, isImporting, importPdfFromUrl]);
+
+  // Listen for postMessage from parent iframe (alternative to URL params)
+  useEffect(() => {
+    const handlePostMessage = (event: MessageEvent) => {
+      // Verify origin if needed (optional for security)
+      console.log('[PostMessage] Received message:', event.data);
+      
+      const { fileUrl, fileName } = event.data;
+      
+      // Only process if we have a fileUrl and no PDF is currently loaded
+      if (fileUrl && !currentPdf && !isImporting && !hasCheckedExisting.current) {
+        console.log('[PostMessage] Processing fileUrl from postMessage:', fileUrl);
+        hasCheckedExisting.current = true;
+        setImportUrl(fileUrl);
+        setImportSource('postMessage');
+        importPdfFromUrl(fileUrl, fileName || null);
+      }
+    };
+    
+    // Listen for postMessage events
+    window.addEventListener('message', handlePostMessage);
+    
+    return () => {
+      window.removeEventListener('message', handlePostMessage);
+    };
+  }, [currentPdf, isImporting, importPdfFromUrl]);
+
+  // Clear state when fileUrl parameter is removed from URL (only for URL-imported PDFs)
+  useEffect(() => {
+    const fileUrl = searchParams.get('fileUrl');
+    
+    // Only reset if import source was URL param and URL param is now removed
+    if (importSource === 'url-param' && !fileUrl && importUrl && currentPdf) {
+      console.log('[PDF] URL parameter removed, clearing imported PDF state');
+      setImportUrl(null);
+      setImportSource(null);
+      hasCheckedExisting.current = false;
+      hasLoadedFields.current = false;
+      reset();
+    }
+  }, [searchParams, importUrl, currentPdf, reset, importSource]);
+
+  // Load fields when currentPdf changes (either from localStorage or after import)
+  useEffect(() => {
+    if (currentPdf?.id) {
+      // Reset the flag when PDF ID changes to allow loading for new PDFs
+      hasLoadedFields.current = false;
+      loadFieldsFromDatabase(currentPdf.id);
+    }
+  }, [currentPdf?.id, loadFieldsFromDatabase]);
 
   // Show loading state while importing from URL
   if (isImporting) {
