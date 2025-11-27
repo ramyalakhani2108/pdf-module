@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test PDF Editor Iframe</title>
+</head>
+<body>
+  <h1>Parent Window - Testing postMessage</h1>
+  <button onclick="sendData()">Send Data to PDF Editor</button>
+  
+  <iframe 
+    id="pdfEditor" 
+    src="http://localhost:3000/" 
+    width="800" 
+    height="600">
+  </iframe>
+
+  <script>
+    function sendData() {
+      const iframe = document.getElementById('pdfEditor');
+      
+      // Send data via postMessage
+      iframe.contentWindow.postMessage({
+        fileUrl: 'https://blazapp-storage.s3.fr-par.scw.cloud/pdf/proposal/1448/1448_pdf_preview.pdf',
+        userId: '12345',
+        projectId: 'abc-xyz',
+        apiKey: 'api_key'
+      }, 'http://localhost:3000'); // Target origin
+      
+      console.log('Data sent to iframe');
+    }
+    
+    // Wait for iframe to load
+    document.getElementById('pdfEditor').addEventListener('load', () => {
+      console.log('Iframe loaded, ready to send data');
+    });
+  </script>
+</body>
+</html>
