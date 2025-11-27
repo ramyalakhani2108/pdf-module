@@ -252,11 +252,13 @@ export function HomeContent() {
     };
   }, [currentPdf, isImporting, importPdfFromUrl]);
 
-  // Clear state when fileUrl parameter is removed from URL (only for URL-imported PDFs)
+  // For postMessage imports, keep importUrl persistent (don't clear on refresh)
+  // For URL param imports, clear if the URL param is removed
   useEffect(() => {
     const fileUrl = searchParams.get('fileUrl');
     
     // Only reset if import source was URL param and URL param is now removed
+    // PostMessage imports persist in the session
     if (importSource === 'url-param' && !fileUrl && importUrl && currentPdf) {
       console.log('[PDF] URL parameter removed, clearing imported PDF state');
       setImportUrl(null);
