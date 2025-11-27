@@ -585,16 +585,16 @@ export const useEditorStore = create<EditorState>()(
     {
       name: STORAGE_KEYS.EDITOR_STATE,
       storage: createJSONStorage(() => localStorage),
-      // Only persist essential state - exclude URL-imported PDFs
+      // Persist all essential state including URL-imported PDFs
+      // The app will re-validate URL-imported PDFs on page load if fileUrl param exists
       partialize: (state) => ({
-        // Don't persist PDF state if it was imported via URL
-        // This ensures URL-imported PDFs require the URL parameter to be present
-        currentPdf: state.isImportedViaUrl ? null : state.currentPdf,
-        currentPage: state.isImportedViaUrl ? 1 : state.currentPage,
-        totalPages: state.isImportedViaUrl ? 0 : state.totalPages,
+        currentPdf: state.currentPdf,
+        isImportedViaUrl: state.isImportedViaUrl,
+        currentPage: state.currentPage,
+        totalPages: state.totalPages,
         // Fields are always synced to database, so we can persist them
         // They'll be loaded from DB when PDF is loaded
-        fields: state.isImportedViaUrl ? [] : state.fields,
+        fields: state.fields,
         zoom: state.zoom,
       }),
     }

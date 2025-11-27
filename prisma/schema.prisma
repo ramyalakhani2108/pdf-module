@@ -76,6 +76,18 @@ model SignatureImage {
   @@map("signature_images")
 }
 
+model ApiKey {
+  id        String   @id @default(uuid())
+  domain    String   @unique
+  apiKey    String   @unique
+  webhook   String?
+  createdAt DateTime @default(now())
+
+  @@index([domain])
+  @@index([apiKey])
+  @@map("api_keys")
+}
+
 enum InputType {
   TEXT
   DATE
