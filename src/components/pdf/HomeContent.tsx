@@ -351,51 +351,42 @@ export function HomeContent() {
 
   return (
     <main className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Header - Clean minimalistic design */}
-      <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-background/95 backdrop-blur-sm z-50">
-        <div className="flex items-center gap-4">
-          {/* Hide Back button if PDF was imported via URL to prevent navigation issues */}
-          {!importUrl && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  reset();
-                  window.history.replaceState({}, '', '/');
-                }}
-                className="gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-              <div className="h-6 w-px bg-border" />
-            </>
-          )}
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <FileText className="w-4 h-4 text-primary" />
-            </div>
-            <span className="font-medium text-sm truncate max-w-[200px] text-foreground">
-              {currentPdf.fileName}
-            </span>
-            {/* Show imported badge when loaded from URL */}
-            {importUrl && (
-              <span className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                Imported
+      {/* Header - Clean minimalistic design - Hidden when PDF is imported via URL */}
+      {!importUrl && (
+        <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-background/95 backdrop-blur-sm z-50">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                reset();
+                window.history.replaceState({}, '', '/');
+              }}
+              className="gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <div className="h-6 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <FileText className="w-4 h-4 text-primary" />
+              </div>
+              <span className="font-medium text-sm truncate max-w-[200px] text-foreground">
+                {currentPdf.fileName}
               </span>
-            )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild className="border-border hover:bg-muted">
-            <a href={`/fill/${currentPdf.id}`} target="_blank" rel="noopener noreferrer">
-              Preview Form
-            </a>
-          </Button>
-        </div>
-      </header>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild className="border-border hover:bg-muted">
+              <a href={`/fill/${currentPdf.id}`} target="_blank" rel="noopener noreferrer">
+                Preview Form
+              </a>
+            </Button>
+          </div>
+        </header>
+      )}
 
       {/* Editor Workspace */}
       <div className="flex-1 flex overflow-hidden min-h-0">
