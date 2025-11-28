@@ -65,11 +65,10 @@ export function HomeContent() {
       });
 
       const data = await response.json();
-      let dbFields: PdfInput[] = [];
 
-      if (data.success && data.data && data.data.length > 0) {
+      if (data.success && data.data) {
         // Transform database fields to match store format
-        dbFields = data.data.map((input: Record<string, unknown>) => ({
+        const dbFields: PdfInput[] = data.data.map((input: Record<string, unknown>) => ({
           id: input.id,
           pdfFileId: input.pdfFileId,
           slug: input.slug,
@@ -92,23 +91,33 @@ export function HomeContent() {
           createdAt: new Date(input.createdAt as string),
           updatedAt: new Date(input.updatedAt as string),
         }));
+
+        // DATABASE IS THE SOURCE OF TRUTH
+        // If database returns data (even empty array), use it and clear localStorage backup
+        if (data.success) {
+          console.log(`[Fields] Loaded ${dbFields.length} fields from database (source of truth)`);
+          setFields(dbFields);
+          
+          // Clear localStorage backup to prevent stale data
+          try {
+            localStorage.removeItem(`${FIELDS_BACKUP_KEY}-${pdfId}`);
+            console.log('[Fields] Cleared localStorage backup (database is source of truth)');
+          } catch (e) {
+            console.error('[Fields] Failed to clear localStorage backup:', e);
+          }
+          return;
+        }
       }
 
-      // Check localStorage for backup (may have unsaved changes)
+      // If database request failed or returned no success, fall back to localStorage
+      console.log('[Fields] Database request failed, falling back to localStorage');
       const localBackup = loadFieldsFromLocalStorage(pdfId);
-
-      // Use whichever has more fields (localStorage backup may have unsaved work)
-      if (localBackup && localBackup.length > dbFields.length) {
-        console.log(`[Fields] Using localStorage backup (${localBackup.length} fields) over DB (${dbFields.length} fields)`);
-        setFields(localBackup);
-      } else if (dbFields.length > 0) {
-        console.log(`[Fields] Loaded ${dbFields.length} fields from database`);
-        setFields(dbFields);
-      } else if (localBackup && localBackup.length > 0) {
-        console.log(`[Fields] Using localStorage backup (${localBackup.length} fields), DB was empty`);
+      if (localBackup && localBackup.length > 0) {
+        console.log(`[Fields] Using localStorage backup (${localBackup.length} fields) as database fallback`);
         setFields(localBackup);
       } else {
         console.log('[Fields] No fields found in database or localStorage');
+        setFields([]);
       }
     } catch (err) {
       console.error('Failed to load fields from database:', err);
@@ -123,6 +132,8 @@ export function HomeContent() {
       if (localBackup && localBackup.length > 0) {
         console.log(`[Fields] Database failed, using localStorage backup (${localBackup.length} fields)`);
         setFields(localBackup);
+      } else {
+        setFields([]);
       }
     }
   }, [setFields, showError]);
@@ -391,7 +402,7 @@ export function HomeContent() {
   return (
     <main className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header - Clean minimalistic design - Hidden when PDF is imported via URL */}
-      {!importUrl && (
+      {/* {!importUrl && (
         <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-background/95 backdrop-blur-sm z-50">
           <div className="flex items-center gap-4">
             <Button
@@ -425,7 +436,7 @@ export function HomeContent() {
             </Button>
           </div>
         </header>
-      )}
+      )} */}
 
       {/* Editor Workspace */}
       <div className="flex-1 flex overflow-hidden min-h-0">

@@ -11,9 +11,9 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '@/lib/prisma';
-import { validateApiKey, createErrorResponse, createSuccessResponse } from '@/lib/utils';
+import { validateApiKeyAsync } from '@/lib/api-auth';
+import { createErrorResponse, createSuccessResponse } from '@/lib/utils';
 import { 
-  API_CONFIG, 
   PDF_CONFIG, 
   FILE_CONFIG, 
   ERROR_MESSAGES 
@@ -31,9 +31,10 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      return createErrorResponse(ERROR_MESSAGES.UNAUTHORIZED, 401);
+    // Validate API key (async for full database validation)
+    const authResult = await validateApiKeyAsync(request);
+    if (!authResult.isValid) {
+      return createErrorResponse(authResult.error || ERROR_MESSAGES.UNAUTHORIZED, 401);
     }
 
     const formData = await request.formData();
@@ -117,9 +118,10 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      return createErrorResponse(ERROR_MESSAGES.UNAUTHORIZED, 401);
+    // Validate API key (async for full database validation)
+    const authResult = await validateApiKeyAsync(request);
+    if (!authResult.isValid) {
+      return createErrorResponse(authResult.error || ERROR_MESSAGES.UNAUTHORIZED, 401);
     }
 
     const pdfs = await prisma.pdfFile.findMany({

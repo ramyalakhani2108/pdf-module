@@ -68,7 +68,8 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '@/lib/prisma';
-import { validateApiKey, createErrorResponse, createSuccessResponse } from '@/lib/utils';
+import { validateApiKeyAsync } from '@/lib/api-auth';
+import { createErrorResponse, createSuccessResponse } from '@/lib/utils';
 import { 
   API_CONFIG, 
   PDF_CONFIG, 
@@ -129,17 +130,18 @@ function extractFileName(url: string, contentDisposition?: string | null): strin
  */
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      return createErrorResponse(ERROR_MESSAGES.UNAUTHORIZED, 401);
-    }
-
-    // Parse request body
-    let body: { url: string; fileName?: string };
+    // Parse request body first to check for api_key in body
+    let body: { url: string; fileName?: string; api_key?: string };
     try {
       body = await request.json();
     } catch {
       return createErrorResponse('Invalid JSON body', 400);
+    }
+
+    // Validate API key (checks query param, body, and master key)
+    const authResult = await validateApiKeyAsync(request, body);
+    if (!authResult.isValid) {
+      return createErrorResponse(authResult.error || ERROR_MESSAGES.UNAUTHORIZED, 401);
     }
 
     const { url, fileName: customFileName } = body;

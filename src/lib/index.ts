@@ -57,6 +57,9 @@ export {
 // Utility functions
 export * from './utils';
 
+// CORS utilities
+export * from './cors';
+
 // API client
 export * from './api-client';
 

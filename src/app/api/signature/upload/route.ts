@@ -9,7 +9,8 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '@/lib/prisma';
-import { validateApiKey, createErrorResponse, createSuccessResponse } from '@/lib/utils';
+import { validateApiKeyAsync } from '@/lib/api-auth';
+import { createErrorResponse, createSuccessResponse } from '@/lib/utils';
 import { FILE_CONFIG, ERROR_MESSAGES } from '@/lib/constants';
 
 /**
@@ -18,9 +19,10 @@ import { FILE_CONFIG, ERROR_MESSAGES } from '@/lib/constants';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      return createErrorResponse(ERROR_MESSAGES.UNAUTHORIZED, 401);
+    // Validate API key (async for full database validation)
+    const authResult = await validateApiKeyAsync(request);
+    if (!authResult.isValid) {
+      return createErrorResponse(authResult.error || ERROR_MESSAGES.UNAUTHORIZED, 401);
     }
 
     const formData = await request.formData();

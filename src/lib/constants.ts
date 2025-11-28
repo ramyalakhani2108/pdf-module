@@ -22,8 +22,6 @@
 export const API_CONFIG = {
   /** Maximum duration for API routes in seconds (for large PDF processing) */
   MAX_DURATION: 60,
-  /** Default API key header name */
-  API_KEY_HEADER: 'x-api-key',
   /** Development API key (should be overridden in production) */
   DEV_API_KEY: process.env.API_KEY,
 } as const;

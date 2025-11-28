@@ -111,6 +111,19 @@ export interface SignatureImage {
     createdAt: Date;
 }
 
+/**
+ * API Key registration for domain access
+ */
+export interface ApiKeyRegistration {
+    id: string;
+    domain: string;
+    apiKey: string;
+    webhook: string | null;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 export interface FieldOverlay {
     id: string;
     slug: string;

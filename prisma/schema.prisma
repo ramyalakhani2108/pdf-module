@@ -81,7 +81,9 @@ model ApiKey {
   domain    String   @unique
   apiKey    String   @unique
   webhook   String?
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([domain])
   @@index([apiKey])

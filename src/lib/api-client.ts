@@ -71,12 +71,18 @@ export class PdfApiClient {
   }
 
   /**
+   * Append API key to URL as query parameter
+   */
+  private appendApiKey(url: string): string {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}api_key=${encodeURIComponent(this.apiKey)}`;
+  }
+
+  /**
    * Get default headers for API requests
    */
   private getHeaders(contentType?: string): HeadersInit {
-    const headers: HeadersInit = {
-      [API_CONFIG.API_KEY_HEADER]: this.apiKey,
-    };
+    const headers: HeadersInit = {};
     
     if (contentType) {
       headers['Content-Type'] = contentType;
@@ -128,11 +134,9 @@ export class PdfApiClient {
     formData.append('file', file);
 
     try {
-      const response = await fetch(`${this.baseUrl}/api/pdf/upload`, {
+      const response = await fetch(this.appendApiKey(`${this.baseUrl}/api/pdf/upload`), {
         method: 'POST',
-        headers: {
-          [API_CONFIG.API_KEY_HEADER]: this.apiKey,
-        },
+        headers: this.getHeaders(),
         body: formData,
       });
 
@@ -152,7 +156,7 @@ export class PdfApiClient {
    */
   async getPdfs(): Promise<ApiResult<{ success: boolean; data: any[] }>> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/pdf/upload`, {
+      const response = await fetch(this.appendApiKey(`${this.baseUrl}/api/pdf/upload`), {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -174,7 +178,7 @@ export class PdfApiClient {
    */
   async fillPdf(request: FillPdfRequest): Promise<ApiResult<FillPdfResponse>> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/pdf/fill`, {
+      const response = await fetch(this.appendApiKey(`${this.baseUrl}/api/pdf/fill`), {
         method: 'POST',
         headers: this.getHeaders('application/json'),
         body: JSON.stringify(request),
@@ -202,7 +206,7 @@ export class PdfApiClient {
    */
   async saveInputs(pdfFileId: string, inputs: PdfInput[]): Promise<ApiResult<SaveInputsResponse>> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/inputs/save`, {
+      const response = await fetch(this.appendApiKey(`${this.baseUrl}/api/inputs/save`), {
         method: 'POST',
         headers: this.getHeaders('application/json'),
         body: JSON.stringify({ pdfFileId, inputs }),
@@ -225,7 +229,7 @@ export class PdfApiClient {
    */
   async getInputs(pdfId: string): Promise<ApiResult<{ success: boolean; data: PdfInput[] }>> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/inputs/${pdfId}`, {
+      const response = await fetch(this.appendApiKey(`${this.baseUrl}/api/inputs/${pdfId}`), {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -261,11 +265,9 @@ export class PdfApiClient {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/api/signature/upload`, {
+      const response = await fetch(this.appendApiKey(`${this.baseUrl}/api/signature/upload`), {
         method: 'POST',
-        headers: {
-          [API_CONFIG.API_KEY_HEADER]: this.apiKey,
-        },
+        headers: this.getHeaders(),
         body: formData,
       });
 

@@ -6,7 +6,8 @@
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { validateApiKey, createErrorResponse, createSuccessResponse } from '@/lib/utils';
+import { validateApiKeyAsync } from '@/lib/api-auth';
+import { createErrorResponse, createSuccessResponse } from '@/lib/utils';
 import { ERROR_MESSAGES } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
@@ -38,9 +39,10 @@ function extractFileName(url: string): string {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      return createErrorResponse(ERROR_MESSAGES.UNAUTHORIZED, 401);
+    // Validate API key (async for full database validation)
+    const authResult = await validateApiKeyAsync(request);
+    if (!authResult.isValid) {
+      return createErrorResponse(authResult.error || ERROR_MESSAGES.UNAUTHORIZED, 401);
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -98,13 +100,14 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      return createErrorResponse(ERROR_MESSAGES.UNAUTHORIZED, 401);
-    }
-
     const body = await request.json();
     const { id } = body;
+
+    // Validate API key (async for full database validation)
+    const authResult = await validateApiKeyAsync(request, body);
+    if (!authResult.isValid) {
+      return createErrorResponse(authResult.error || ERROR_MESSAGES.UNAUTHORIZED, 401);
+    }
 
     if (!id) {
       return createErrorResponse('PDF ID is required', 400);

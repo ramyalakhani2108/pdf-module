@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Module Test Client</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Initial Setup Screen -->
+  <div id="setup-screen" class="screen active">
+    <div class="container">
+      <div class="header">
+        <div class="logo">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <h1>PDF Module Test Client</h1>
+        <p class="subtitle">Test the PDF Field Editor integration workflow</p>
+      </div>
+
+      <div class="card">
+        <h2>Configuration</h2>
+        
+        <div class="form-group">
+          <label for="api-base-url">PDF Module Base URL</label>
+          <input 
+            type="url" 
+            id="api-base-url" 
+            value="http://localhost:3000" 
+            placeholder="http://localhost:3000"
+          >
+          <span class="hint">The URL where your PDF module is running</span>
+        </div>
+
+        <div class="form-group">
+          <label for="master-key">Master API Key</label>
+          <input 
+            type="text" 
+            id="master-key" 
+            placeholder="Enter your master API key from .env"
+          >
+          <span class="hint">Required for domain registration (API_KEY from .env)</span>
+        </div>
+
+        <div class="form-group">
+          <label for="file-url">PDF File URL</label>
+          <input 
+            type="url" 
+            id="file-url" 
+            value="https://blazapp-storage.s3.fr-par.scw.cloud/pdf/proposal/1448/1448_pdf_preview.pdf"
+            placeholder="https://example.com/sample.pdf"
+          >
+          <span class="hint">URL of the PDF file to load in the editor</span>
+        </div>
+
+        <div class="form-group">
+          <label for="file-name">Custom File Name (Optional)</label>
+          <input 
+            type="text" 
+            id="file-name" 
+            placeholder="my-document.pdf"
+          >
+          <span class="hint">Override the PDF file name (leave empty to auto-detect)</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Domain Registration</h2>
+        
+        <div class="form-group">
+          <label for="domain">Domain to Register</label>
+          <input 
+            type="text" 
+            id="domain" 
+            value="test-client.localhost"
+            placeholder="example.com"
+          >
+          <span class="hint">Domain name for API key registration</span>
+        </div>
+
+        <div class="form-group">
+          <label for="webhook-url">Webhook URL (Optional)</label>
+          <input 
+            type="url" 
+            id="webhook-url" 
+            placeholder="https://example.com/webhook"
+          >
+          <span class="hint">URL to receive notifications (leave empty for dummy)</span>
+        </div>
+
+        <div id="registration-status" class="status-box hidden">
+          <div class="status-content">
+            <span class="status-icon"></span>
+            <span class="status-text"></span>
+          </div>
+          <pre id="api-response" class="hidden"></pre>
+        </div>
+
+        <button id="register-btn" class="btn btn-primary">
+          <span class="btn-text">Register Domain & Get API Key</span>
+          <span class="btn-loading hidden">
+            <svg class="spinner" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="60" stroke-dashoffset="20"></circle>
+            </svg>
+            Registering...
+          </span>
+        </button>
+      </div>
+
+      <div id="api-key-card" class="card hidden">
+        <h2>API Key Retrieved ✓</h2>
+        
+        <div class="key-display">
+          <code id="api-key-value"></code>
+          <button id="copy-key-btn" class="btn btn-icon" title="Copy to clipboard">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+
+        <button id="load-pdf-btn" class="btn btn-success btn-large">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14"></path>
+            <path d="m12 5 7 7-7 7"></path>
+          </svg>
+          Launch PDF Editor
+        </button>
+      </div>
+
+      <div class="card info-card">
+        <h3>📋 Test Workflow</h3>
+        <ol>
+          <li>Enter the PDF Module base URL (default: localhost:3000)</li>
+          <li>Enter the Master API Key from your .env file</li>
+          <li>Provide a PDF URL to test with</li>
+          <li>Click "Register Domain" to get an API key</li>
+          <li>Click "Launch PDF Editor" to open the editor in an iframe</li>
+          <li>The API key will be sent via postMessage</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="screen">
+    <div class="loading-content">
+      <div class="loading-spinner">
+        <svg viewBox="0 0 50 50">
+          <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="90, 150" stroke-dashoffset="0">
+            <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
+          </circle>
+        </svg>
+      </div>
+      <h2>Loading PDF Editor...</h2>
+      <p id="loading-status">Initializing iframe connection</p>
+    </div>
+  </div>
+
+  <!-- PDF Editor Screen (Fullscreen Iframe) -->
+  <div id="editor-screen" class="screen">
+    <div class="editor-toolbar">
+      <button id="back-btn" class="btn btn-ghost">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m12 19-7-7 7-7"></path>
+          <path d="M19 12H5"></path>
+        </svg>
+        Back to Setup
+      </button>
+      <div class="toolbar-info">
+        <span id="connection-status" class="status-badge">
+          <span class="status-dot"></span>
+          <span class="status-label">Connecting...</span>
+        </span>
+      </div>
+    </div>
+    <div class="iframe-container">
+      <iframe 
+        id="pdf-editor-iframe"
+        title="PDF Field Editor"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+      ></iframe>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toast-container"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

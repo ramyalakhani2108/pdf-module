@@ -5,7 +5,8 @@
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { validateApiKey, createErrorResponse, createSuccessResponse } from '@/lib/utils';
+import { validateApiKeyAsync } from '@/lib/api-auth';
+import { createErrorResponse, createSuccessResponse } from '@/lib/utils';
 import { ERROR_MESSAGES } from '@/lib/constants';
 
 /**
@@ -17,9 +18,10 @@ export async function GET(
   { params }: { params: Promise<{ pdfId: string }> }
 ) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      return createErrorResponse(ERROR_MESSAGES.UNAUTHORIZED, 401);
+    // Validate API key (async for full database validation)
+    const authResult = await validateApiKeyAsync(request);
+    if (!authResult.isValid) {
+      return createErrorResponse(authResult.error || ERROR_MESSAGES.UNAUTHORIZED, 401);
     }
 
     const { pdfId } = await params;

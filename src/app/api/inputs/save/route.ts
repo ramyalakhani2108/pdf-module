@@ -7,9 +7,9 @@
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { InputType } from '@prisma/client';
-import { validateApiKey, createErrorResponse, createSuccessResponse } from '@/lib/utils';
+import { validateApiKeyAsync } from '@/lib/api-auth';
+import { createErrorResponse, createSuccessResponse } from '@/lib/utils';
 import { 
-  API_CONFIG, 
   PDF_CONFIG, 
   FONT_CONFIG, 
   ERROR_MESSAGES 
@@ -25,10 +25,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      console.error('API key validation failed');
-      return createErrorResponse(ERROR_MESSAGES.UNAUTHORIZED, 401);
+    // Validate API key (async for full database validation)
+    const authResult = await validateApiKeyAsync(request);
+    if (!authResult.isValid) {
+      console.error('API key validation failed:', authResult.error);
+      return createErrorResponse(authResult.error || ERROR_MESSAGES.UNAUTHORIZED, 401);
     }
 
     const body = await request.json();
@@ -39,14 +40,6 @@ export async function POST(request: NextRequest) {
     if (!pdfFileId || !Array.isArray(inputs)) {
       console.error('Invalid request body:', { pdfFileId, inputsType: typeof inputs });
       return createErrorResponse(ERROR_MESSAGES.INVALID_REQUEST);
-    }
-
-    if (inputs.length === 0) {
-      console.warn('No inputs to save');
-      return createSuccessResponse({
-        success: true,
-        data: { count: 0 },
-      });
     }
 
     // Verify PDF exists
@@ -61,12 +54,21 @@ export async function POST(request: NextRequest) {
 
     console.log('PDF found:', { fileName: pdfFile.fileName, pageCount: pdfFile.pageCount });
 
-    // Delete existing inputs for this PDF
+    // Delete existing inputs for this PDF (always delete, even if new inputs array is empty)
     const deleteResult = await prisma.pdfInput.deleteMany({
       where: { pdfFileId },
     });
 
     console.log('Deleted existing inputs:', deleteResult.count);
+
+    // If no inputs to save, return success (all inputs were deleted)
+    if (inputs.length === 0) {
+      console.log('All inputs removed for PDF:', pdfFileId);
+      return createSuccessResponse({
+        success: true,
+        data: { count: 0, deleted: deleteResult.count },
+      });
+    }
 
     // Batch inserts for large PDFs with many inputs
     const batchSize = PDF_CONFIG.BATCH_SIZE;

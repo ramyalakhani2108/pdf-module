@@ -2,10 +2,12 @@
  * @fileoverview Utility functions for the PDF Module
  * @description Common utility functions used throughout the application
  * including CSS class merging, formatting, validation, and API response helpers.
+ * 
+ * NOTE: API authentication functions are in api-auth.ts and should be imported
+ * directly from there in API routes to avoid client-side bundling issues.
  */
 
 import { type ClassValue, clsx } from 'clsx';
-import { API_CONFIG, ERROR_MESSAGES } from './constants';
 
 // =============================================================================
 // CSS UTILITIES
@@ -74,40 +76,8 @@ export function generateSlug(label: string): string {
 }
 
 // =============================================================================
-// API UTILITIES
+// RESPONSE UTILITIES
 // =============================================================================
-
-/**
- * Validate API key from request headers
- * @param request - Next.js Request object
- * @returns True if API key is valid
- * 
- * @example
- * ```typescript
- * export async function POST(request: NextRequest) {
- *   if (!validateApiKey(request)) {
- *     return createErrorResponse('Unauthorized', 401);
- *   }
- *   // Continue with authorized request
- * }
- * ```
- */
-export function validateApiKey(request: Request): boolean {
-  const apiKey = request.headers.get(API_CONFIG.API_KEY_HEADER);
-  const expectedKey = process.env.API_KEY;
-
-  // Warn if API_KEY not configured (development mode only)
-  if (!expectedKey) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('⚠️ API_KEY not configured in environment - using development default');
-      return apiKey === API_CONFIG.DEV_API_KEY;
-    }
-    console.error('❌ API_KEY not configured in production environment');
-    return false;
-  }
-
-  return apiKey === expectedKey;
-}
 
 /**
  * Create a standardized error response

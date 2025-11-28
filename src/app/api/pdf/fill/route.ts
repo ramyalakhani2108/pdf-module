@@ -17,8 +17,9 @@ import { readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '@/lib/prisma';
-import { validateApiKey, createErrorResponse, createSuccessResponse } from '@/lib/utils';
-import { API_CONFIG, ERROR_MESSAGES, CALIBRATION_CONFIG } from '@/lib/constants';
+import { validateApiKeyAsync } from '@/lib/api-auth';
+import { createErrorResponse, createSuccessResponse } from '@/lib/utils';
+import { ERROR_MESSAGES, CALIBRATION_CONFIG } from '@/lib/constants';
 import { IconVariant } from '@/lib/types';
 
 // Configure route for large PDFs (100MB, 1000+ pages)
@@ -127,13 +128,15 @@ function parseColor(hexColor: string | null | undefined): { r: number; g: number
  */
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      return createErrorResponse(ERROR_MESSAGES.UNAUTHORIZED, 401);
-    }
-
+    // Parse body first to extract api_key if present
     const body = await request.json();
     const { pdfFileId, values, adjustedPositions = {} } = body;
+
+    // Validate API key (async for full database validation)
+    const authResult = await validateApiKeyAsync(request, body);
+    if (!authResult.isValid) {
+      return createErrorResponse(authResult.error || ERROR_MESSAGES.UNAUTHORIZED, 401);
+    }
 
     if (!pdfFileId || !values) {
       return createErrorResponse(ERROR_MESSAGES.INVALID_REQUEST);
